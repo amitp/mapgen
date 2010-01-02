@@ -213,65 +213,6 @@ package {
       }
     }
         
-    public function makeRiverChannel():void {
-      var x:int, y:int;
-      var queue:Array = new Array();
-      var map:Array = new Array();
-      var index:Array = new Array(SIZE);
-      var start:int = 0;
-      for (x = 0; x < SIZE; x++) {
-        index[x] = new Array(SIZE);
-        for (y = 0; y < SIZE; y++) {
-          index[x][y] = x * SIZE + y;
-          var node:Object = {index: index[x][y], x: x, y: y, dist: 1e10,
-                             altitude: altitude[x][y], previous: -1};
-          map[index[x][y]] = node;
-          queue.push(node);
-          if (node.altitude < map[start].altitude) {
-            start = node.index;
-          }
-        }
-      }
-      
-      map[start].dist = 0;
-
-      Debug.trace(queue.length);
-      
-      while (queue.length > 15000) {
-        queue.sortOn('dist', Array.NUMERIC | Array.DESCENDING);
-        node = queue.pop();
-        x = node.x;
-        y = node.y;
-        for (var dx:int = -1; dx <= +1; dx++) {
-          for (var dy:int = -1; dy <= +1; dy++) {
-            if ((dx != 0 || dy != 0)
-                && 0 <= x+dx && x+dx < SIZE
-                && 0 <= y+dy && y+dy < SIZE) {
-              var node2:Object = map[index[x+dx][y+dy]];
-              var altDist:Number = node.dist + (1 + Math.max(0, node2.altitude - node.altitude));
-              if (altDist < node2.dist) {
-                node2.dist = altDist;
-                node2.previous = node.index;
-              }
-            }
-          }
-        }
-      }
-
-      for (x = 0; x < SIZE; x++) {
-        for (y = 0; y < SIZE; y++) {
-          node = map[index[x][y]];
-          if (node.previous != -1) {
-            node2 = map[node.previous];
-            if (node2.altitude < node.altitude) {
-              altitude[x][y] = node2.altitude + 1;
-              moisture[x][y] = 255;
-            }
-          }
-        }
-      }
-    }
-    
     public function channelsToColors():void {
       for (var x:int = 0; x < SIZE; x++) {
         for (var y:int = 0; y < SIZE; y++) {

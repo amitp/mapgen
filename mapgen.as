@@ -9,35 +9,33 @@ package {
   import flash.geom.*;
   import flash.display.*;
   import flash.filters.*;
+  import flash.text.*;
+  import flash.events.*;
 
   public class mapgen extends Sprite {
     public static var SEED:int = Math.random() * 50000;
     public static var OCEAN_ALTITUDE:int = 1;
-    public static var SIZE:int = 384;
+    public static var SIZE:int = 128;
+
+    public var seed_text:TextField = new TextField();
+    public var seed_button:TextField = new TextField();
     
     public var altitude:Vector.<Vector.<int>> = make2dArray(SIZE, SIZE);
     public var moisture:Vector.<Vector.<int>> = make2dArray(SIZE, SIZE);
     
     public var map:BitmapData = new BitmapData(SIZE, SIZE);
+    public var moistureBitmap:BitmapData = new BitmapData(SIZE, SIZE);
+    public var altitudeBitmap:BitmapData = new BitmapData(SIZE, SIZE);
     
     public function mapgen() {
       stage.scaleMode = "noScale";
+      stage.align = "TL";
+      
       addChild(new Debug(this));
       
-      graphics.beginFill(0xaaaa99);
+      graphics.beginFill(0x9999aa);
       graphics.drawRect(-1000, -1000, 2000, 2000);
       graphics.endFill();
-
-      generate();
-      spreadMoisture();
-      // makeRiverChannel();
-      
-      //carveCanyons();
-      
-      //spreadMoisture();
-      spreadMoisture();
-      
-      channelsToColors();
 
       var b:Bitmap = new Bitmap(map);
       b.x = 130;
@@ -46,21 +44,66 @@ package {
       b.scaleY = b.scaleX;
       addChild(b);
 
-      b = new Bitmap(arrayToBitmap(moisture));
-      b.x = 0;
-      b.y = 0;
-      b.scaleX = 128.0/SIZE;
-      b.scaleY = b.scaleX;
-      addChild(b);
-
-      b = new Bitmap(arrayToBitmap(altitude));
+      b = new Bitmap(moistureBitmap);
       b.x = 0;
       b.y = 130;
       b.scaleX = 128.0/SIZE;
       b.scaleY = b.scaleX;
       addChild(b);
+
+      b = new Bitmap(altitudeBitmap);
+      b.x = 0;
+      b.y = 260;
+      b.scaleX = 128.0/SIZE;
+      b.scaleY = b.scaleX;
+      addChild(b);
+
+      seed_text.text = "" + SEED;
+      seed_text.background = true;
+      seed_text.autoSize = TextFieldAutoSize.LEFT;
+      seed_text.type = TextFieldType.INPUT;
+      seed_text.restrict = "0-9";
+      seed_text.y = 390;
+      seed_text.addEventListener(KeyboardEvent.KEY_UP,
+                                 function (e:Event):void {
+                                   SEED = int(seed_text.text);
+                                   newMap();
+                                 });
+      addChild(seed_text);
+
+      seed_button.text = "Random";
+      seed_button.background = true;
+      seed_button.selectable = false;
+      seed_button.x = 75;
+      seed_button.y = seed_text.y;
+      seed_button.autoSize = TextFieldAutoSize.LEFT;
+      seed_button.filters = [new BevelFilter(1)];
+      seed_button.addEventListener(MouseEvent.MOUSE_UP,
+                                   function (e:Event):void {
+                                     SEED = int(100000*Math.random());
+                                     seed_text.text = "" + SEED;
+                                     newMap();
+                                   });
+      addChild(seed_button);
+      
+      newMap();
     }
 
+    public function newMapEvent(event:Event):void {
+      newMap();
+    }
+
+    public function newMap():void {
+      generate();
+      spreadMoisture();
+      //carveCanyons();
+      spreadMoisture();
+      
+      channelsToColors();
+      arrayToBitmap(moisture, moistureBitmap);
+      arrayToBitmap(altitude, altitudeBitmap);
+    }
+    
     public function generate():void {
       // Generate 3-channel perlin noise and copy 2 of the channels out
       var b:BitmapData = new BitmapData(SIZE, SIZE);
@@ -128,15 +171,13 @@ package {
       return v;
     }
 
-    public function arrayToBitmap(v:Vector.<Vector.<int>>):BitmapData {
-      var b:BitmapData = new BitmapData(SIZE, SIZE, false, 0xff222222);
+    public function arrayToBitmap(v:Vector.<Vector.<int>>, b:BitmapData):void {
       for (var x:int = 0; x < SIZE; x++) {
         for (var y:int = 0; y < SIZE; y++) {
           var c:int = v[x][y];
           b.setPixel(x, y, (c << 16) | (c << 8) | c);
         }
       }
-      return b;
     }
 
     public function spreadMoisture():void {

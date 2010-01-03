@@ -16,14 +16,19 @@ package {
     public static var SEED:int = Math.random() * 50000;
     public static var OCEAN_ALTITUDE:int = 1;
     public static var SIZE:int = 128;
+    public static var BIGSIZE:int = 8192;
+    public static var DETAILSIZE:int = 256;
 
     public var seed_text:TextField = new TextField();
     public var seed_button:TextField = new TextField();
+
+    public var location_text:TextField = new TextField();
     
     public var altitude:Vector.<Vector.<int>> = make2dArray(SIZE, SIZE);
     public var moisture:Vector.<Vector.<int>> = make2dArray(SIZE, SIZE);
     
     public var map:BitmapData = new BitmapData(SIZE, SIZE);
+    public var detailMap:BitmapData = new BitmapData(DETAILSIZE, DETAILSIZE);
     public var moistureBitmap:BitmapData = new BitmapData(SIZE, SIZE);
     public var altitudeBitmap:BitmapData = new BitmapData(SIZE, SIZE);
     
@@ -37,13 +42,29 @@ package {
       graphics.drawRect(-1000, -1000, 2000, 2000);
       graphics.endFill();
 
-      var b:Bitmap = new Bitmap(map);
-      b.x = 130;
-      b.y = 0;
-      b.scaleX = 384.0/SIZE;
-      b.scaleY = b.scaleX;
-      addChild(b);
+      // NOTE: Bitmap and Shape objects do not support mouse events,
+      // so I'm wrapping the bitmap inside a sprite.
+      var s:Sprite = new Sprite();
+      s.x = 130;
+      s.y = 0;
+      s.scaleX = s.scaleY = 256.0/SIZE;
+      s.addEventListener(MouseEvent.MOUSE_DOWN,
+                         function (e:MouseEvent):void {
+                           s.addEventListener(MouseEvent.MOUSE_MOVE, onMapClick);
+                         });
+      stage.addEventListener(MouseEvent.MOUSE_UP,
+                             function (e:MouseEvent):void {
+                               s.removeEventListener(MouseEvent.MOUSE_MOVE, onMapClick);
+                             });
+        
+      s.addChild(new Bitmap(map));
+      addChild(s);
 
+      var b:Bitmap = new Bitmap(detailMap);
+      b.x = 130;
+      b.y = 260;
+      addChild(b);
+      
       b = new Bitmap(moistureBitmap);
       b.x = 0;
       b.y = 130;
@@ -85,10 +106,21 @@ package {
                                      newMap();
                                    });
       addChild(seed_button);
+
+      location_text.text = "(detail map) ==>";
+      location_text.x = 50;
+      location_text.y = 430;
+      location_text.autoSize = TextFieldAutoSize.LEFT;
+      addChild(location_text);
       
       newMap();
     }
 
+    public function onMapClick(event:MouseEvent):void {
+      location_text.text = "" + event.localX + ", " + event.localY;
+      generateDetailMap(event.localX, event.localY);
+    }
+    
     public function newMapEvent(event:Event):void {
       newMap();
     }
@@ -274,6 +306,14 @@ package {
           else color = 0x998855;
 
           map.setPixel(x, y, color);
+        }
+      }
+    }
+
+    public function generateDetailMap(centerX:Number, centerY:Number):void {
+      for (var x:int = 0; x < DETAILSIZE; x++) {
+        for (var y:int = 0; y < DETAILSIZE; y++) {
+          detailMap.setPixel(x, y, map.getPixel(int(centerX), int(centerY)));
         }
       }
     }

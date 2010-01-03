@@ -2,9 +2,6 @@
 // Author: amitp@cs.stanford.edu
 // License: MIT
 
-// redistribute altitudes
-   // river carving
-     
 package {
   import flash.geom.*;
   import flash.display.*;
@@ -51,6 +48,7 @@ package {
       s.addEventListener(MouseEvent.MOUSE_DOWN,
                          function (e:MouseEvent):void {
                            s.addEventListener(MouseEvent.MOUSE_MOVE, onMapClick);
+                           onMapClick(e);
                          });
       stage.addEventListener(MouseEvent.MOUSE_UP,
                              function (e:MouseEvent):void {
@@ -285,35 +283,66 @@ package {
         }
       }
     }
-        
+
+    public function moistureAndAltitudeToColor(m:Number, a:Number):int {
+      var color:int = 0xff0000;
+      
+      if (a < OCEAN_ALTITUDE) color = 0x000099;
+      else if (a > 220) {
+        if (a > 250) color = 0xffffff;
+        else if (a > 240) color = 0xeeeeee;
+        else if (a > 230) color = 0xdddddd;
+        else color = 0xcccccc;
+        if (m > 150) color -= 0x331100;
+      }
+      else if (m > 240) color = 0x00cc99;
+      else if (m > 200) color = 0x558866;
+      else if (m > 100) color = 0x446633;
+      else if (m > 50) color = 0xaaaa77;
+      else color = 0x998855;
+      
+      return color;
+    }
+    
     public function channelsToColors():void {
       for (var x:int = 0; x < SIZE; x++) {
         for (var y:int = 0; y < SIZE; y++) {
-          var color:int = 0xff0000;
-          
-          if (altitude[x][y] < OCEAN_ALTITUDE) color = 0x000099;
-          else if (altitude[x][y] > 220) {
-            if (altitude[x][y] > 250) color = 0xffffff;
-            else if (altitude[x][y] > 240) color = 0xeeeeee;
-            else if (altitude[x][y] > 230) color = 0xdddddd;
-            else color = 0xcccccc;
-            if (moisture[x][y] > 150) color -= 0x331100;
-          }
-          else if (moisture[x][y] > 240) color = 0x00cc99;
-          else if (moisture[x][y] > 200) color = 0x558866;
-          else if (moisture[x][y] > 100) color = 0x446633;
-          else if (moisture[x][y] > 50) color = 0xaaaa77;
-          else color = 0x998855;
-
-          map.setPixel(x, y, color);
+          map.setPixel(x, y, moistureAndAltitudeToColor(moisture[x][y],
+                                                        altitude[x][y]));
         }
       }
     }
 
     public function generateDetailMap(centerX:Number, centerY:Number):void {
-      for (var x:int = 0; x < DETAILSIZE; x++) {
-        for (var y:int = 0; y < DETAILSIZE; y++) {
-          detailMap.setPixel(x, y, map.getPixel(int(centerX), int(centerY)));
+      var noise:BitmapData = new BitmapData(BIGSIZE/SIZE, BIGSIZE/SIZE);
+      var noiseScale:int = 10; // out of 128
+      noise.noise(SEED, 128-noiseScale, 128+noiseScale);
+
+      // We want to fill an area DETAILSIZE x DETAILSIZE by combining
+      // the base moisture and altitude levels with the noise function
+      // (deterministic, since we use a non-random seed).
+
+      // Coordinates of the top left of the detail area:
+      var baseX:int = int(centerX * BIGSIZE/SIZE - DETAILSIZE/2);
+      var baseY:int = int(centerY * BIGSIZE/SIZE - DETAILSIZE/2);
+
+      // Go through the detail area and compute each pixel color
+      for (var x:int = baseX; x < baseX + DETAILSIZE; x++) {
+        for (var y:int = baseY; y < baseY + DETAILSIZE; y++) {
+          // The moisture and altitude at x,y will be based on the
+          // coarse map, plus the noise scaled by some constant
+          var coarseX:int = int(Math.floor(x * SIZE/BIGSIZE));
+          var coarseY:int = int(Math.floor(y * SIZE/BIGSIZE));
+          var fracX:int = x - coarseX * BIGSIZE/SIZE;
+          var fracY:int = y - coarseY * BIGSIZE/SIZE;
+
+          var noiseColor:int = noise.getPixel(fracX, fracY);
+          
+          var m:Number = moisture[coarseX][coarseY] + ((noiseColor & 0xff) - 128);
+          var a:Number = altitude[coarseX][coarseY] + (((noiseColor >> 8) & 0xff) - 128);
+          
+          detailMap.setPixel(x - baseX, y - baseY,
+                             moistureAndAltitudeToColor(m, a));
         }
       }
     }

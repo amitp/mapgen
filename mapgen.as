@@ -218,8 +218,8 @@ package {
     }
 
     public function spreadMoisture():void {
-      var windX:Number = 5.0;
-      var windY:Number = 2.0;
+      var windX:Number = 455.0 * SIZE/BIGSIZE;
+      var windY:Number = 125.0 * SIZE/BIGSIZE;
       
       for (var x:int = 0; x < SIZE; x++) {
         for (var y:int = 0; y < SIZE; y++) {

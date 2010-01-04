@@ -142,14 +142,21 @@ package {
       equalizeTerrain(b);
       
       var s:Shape = new Shape();
-      
-      s.graphics.beginFill(0xffffff, 0.1);
-      s.graphics.drawCircle(SIZE/2, SIZE/2, SIZE/2);
+
+      var m:Matrix = new Matrix();
+      m.createGradientBox(SIZE, SIZE, 0, 0, 0);
+      s.graphics.beginGradientFill(GradientType.RADIAL,
+                                   [0x000000, 0x000000],
+                                   [0, 0.2],
+                                   [0x00, 0xff],
+                                   m,
+                                   SpreadMethod.PAD);
+      s.graphics.drawRect(0, 0, SIZE, SIZE);
       s.graphics.endFill();
       b.draw(s);
       
       s.graphics.clear();
-      s.graphics.beginFill(0xffffff, 0.1);
+      s.graphics.beginFill(0xffffff, 0.2);
       s.graphics.drawRect(10, 10, SIZE-2*10, SIZE-2*10);
       s.graphics.endFill();
       b.draw(s);

@@ -10,7 +10,7 @@ package {
   import flash.events.*;
 
   public class mapgen extends Sprite {
-    public static var SEED:int = Math.random() * 50000;
+    public static var SEED:int = 50455;
     public static var OCEAN_ALTITUDE:int = 1;
     public static var SIZE:int = 128;
     public static var BIGSIZE:int = 8192;

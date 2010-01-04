@@ -8,13 +8,14 @@ package {
   import flash.filters.*;
   import flash.text.*;
   import flash.events.*;
+  import flash.utils.*;
 
   public class mapgen extends Sprite {
-    public static var SEED:int = 50455;
+    public static var SEED:int = 72689;
     public static var OCEAN_ALTITUDE:int = 1;
-    public static var SIZE:int = 128;
+    public static var SIZE:int = 256;
     public static var BIGSIZE:int = 8192;
-    public static var DETAILSIZE:int = 256;
+    public static var DETAILSIZE:int = 64;
 
     public var seed_text:TextField = new TextField();
     public var seed_button:TextField = new TextField();
@@ -39,50 +40,12 @@ package {
       graphics.drawRect(-1000, -1000, 2000, 2000);
       graphics.endFill();
 
-      // NOTE: Bitmap and Shape objects do not support mouse events,
-      // so I'm wrapping the bitmap inside a sprite.
-      var s:Sprite = new Sprite();
-      s.x = 130;
-      s.y = 0;
-      s.scaleX = s.scaleY = 256.0/SIZE;
-      s.addEventListener(MouseEvent.MOUSE_DOWN,
-                         function (e:MouseEvent):void {
-                           s.addEventListener(MouseEvent.MOUSE_MOVE, onMapClick);
-                           onMapClick(e);
-                         });
-      stage.addEventListener(MouseEvent.MOUSE_UP,
-                             function (e:MouseEvent):void {
-                               s.removeEventListener(MouseEvent.MOUSE_MOVE, onMapClick);
-                             });
-        
-      s.addChild(new Bitmap(map));
-      addChild(s);
-
-      var b:Bitmap = new Bitmap(detailMap);
-      b.x = 130;
-      b.y = 260;
-      addChild(b);
-      
-      b = new Bitmap(moistureBitmap);
-      b.x = 0;
-      b.y = 130;
-      b.scaleX = 128.0/SIZE;
-      b.scaleY = b.scaleX;
-      addChild(b);
-
-      b = new Bitmap(altitudeBitmap);
-      b.x = 0;
-      b.y = 260;
-      b.scaleX = 128.0/SIZE;
-      b.scaleY = b.scaleX;
-      addChild(b);
-
       seed_text.text = "" + SEED;
       seed_text.background = true;
       seed_text.autoSize = TextFieldAutoSize.LEFT;
       seed_text.type = TextFieldType.INPUT;
       seed_text.restrict = "0-9";
-      seed_text.y = 390;
+      seed_text.y = 2;
       seed_text.addEventListener(KeyboardEvent.KEY_UP,
                                  function (e:Event):void {
                                    SEED = int(seed_text.text);
@@ -105,11 +68,51 @@ package {
                                    });
       addChild(seed_button);
 
+      b = new Bitmap(moistureBitmap);
+      b.x = 0;
+      b.y = 20;
+      b.scaleX = 128.0/SIZE;
+      b.scaleY = b.scaleX;
+      addChild(b);
+
+      b = new Bitmap(altitudeBitmap);
+      b.x = 0;
+      b.y = 150;
+      b.scaleX = 128.0/SIZE;
+      b.scaleY = b.scaleX;
+      addChild(b);
+
+      // NOTE: Bitmap and Shape objects do not support mouse events,
+      // so I'm wrapping the bitmap inside a sprite.
+      var s:Sprite = new Sprite();
+      s.x = 0;
+      s.y = 270;
+      s.scaleX = s.scaleY = 256.0/SIZE;
+      s.addEventListener(MouseEvent.MOUSE_DOWN,
+                         function (e:MouseEvent):void {
+                           s.addEventListener(MouseEvent.MOUSE_MOVE, onMapClick);
+                           onMapClick(e);
+                         });
+      stage.addEventListener(MouseEvent.MOUSE_UP,
+                             function (e:MouseEvent):void {
+                               s.removeEventListener(MouseEvent.MOUSE_MOVE, onMapClick);
+                             });
+        
+      s.addChild(new Bitmap(map));
+      addChild(s);
+
       location_text.text = "(detail map) ==>";
-      location_text.x = 50;
-      location_text.y = 430;
+      location_text.x = 150;
+      location_text.y = 200;
       location_text.autoSize = TextFieldAutoSize.LEFT;
       addChild(location_text);
+
+      var b:Bitmap = new Bitmap(detailMap);
+      b.x = 260;
+      b.y = 0;
+      b.scaleX = 512.0 / DETAILSIZE;
+      b.scaleY = 512.0 / DETAILSIZE;
+      addChild(b);
       
       newMap();
     }
@@ -125,7 +128,6 @@ package {
 
     public function newMap():void {
       generate();
-      spreadMoisture();
       //carveCanyons();
       spreadMoisture();
       
@@ -147,14 +149,14 @@ package {
       m.createGradientBox(SIZE, SIZE, 0, 0, 0);
       s.graphics.beginGradientFill(GradientType.RADIAL,
                                    [0x000000, 0x000000],
-                                   [0, 0.2],
+                                   [0.0, 0.2],
                                    [0x00, 0xff],
                                    m,
                                    SpreadMethod.PAD);
       s.graphics.drawRect(0, 0, SIZE, SIZE);
       s.graphics.endFill();
       b.draw(s);
-      
+
       s.graphics.clear();
       s.graphics.beginFill(0xffffff, 0.2);
       s.graphics.drawRect(10, 10, SIZE-2*10, SIZE-2*10);
@@ -304,7 +306,7 @@ package {
         else color = 0xcccccc;
         if (m > 150) color -= 0x331100;
       }
-      else if (m > 240) color = 0x00cc99;
+      else if (m > 240) color = 0x669988;
       else if (m > 200) color = 0x558866;
       else if (m > 100) color = 0x446633;
       else if (m > 50) color = 0xaaaa77;
@@ -326,7 +328,7 @@ package {
 
     public function generateDetailMap(centerX:Number, centerY:Number):void {
       var noise:BitmapData = new BitmapData(BIGSIZE/SIZE, BIGSIZE/SIZE);
-      var noiseScale:int = 10; // out of 128
+      var noiseScale:int = 60; // out of 128
       noise.noise(SEED, 128-noiseScale, 128+noiseScale);
 
       // We want to fill an area DETAILSIZE x DETAILSIZE by combining
@@ -337,20 +339,37 @@ package {
       var baseX:int = int(centerX * BIGSIZE/SIZE - DETAILSIZE/2);
       var baseY:int = int(centerY * BIGSIZE/SIZE - DETAILSIZE/2);
 
+      // 4-point interpolation function
+      function interpolate(A:Vector.<Vector.<int>>, x:Number, y:Number):Number {
+        var coarseX:int = int(Math.floor(x));
+        var coarseY:int = int(Math.floor(y));
+        var fracX:Number = x - coarseX;
+        var fracY:Number = y - coarseY;
+
+        return (A[coarseX][coarseY] * (1-fracX) * (1-fracY)
+                + A[coarseX+1][coarseY] * fracX * (1-fracY)
+                + A[coarseX][coarseY+1] * (1-fracX) * fracY
+                + A[coarseX+1][coarseY+1] * fracX * fracY);
+      }
+      
       // Go through the detail area and compute each pixel color
       for (var x:int = baseX; x < baseX + DETAILSIZE; x++) {
         for (var y:int = baseY; y < baseY + DETAILSIZE; y++) {
           // The moisture and altitude at x,y will be based on the
           // coarse map, plus the noise scaled by some constant
-          var coarseX:int = int(Math.floor(x * SIZE/BIGSIZE));
-          var coarseY:int = int(Math.floor(y * SIZE/BIGSIZE));
-          var fracX:int = x - coarseX * BIGSIZE/SIZE;
-          var fracY:int = y - coarseY * BIGSIZE/SIZE;
 
-          var noiseColor:int = noise.getPixel(fracX, fracY);
-          
-          var m:Number = moisture[coarseX][coarseY] + ((noiseColor & 0xff) - 128);
-          var a:Number = altitude[coarseX][coarseY] + (((noiseColor >> 8) & 0xff) - 128);
+          var noiseColor:int = noise.getPixel(x % (BIGSIZE/SIZE), y % (BIGSIZE/SIZE));
+
+          var m:Number = interpolate(moisture, x * SIZE/BIGSIZE, y * SIZE/BIGSIZE) + ((noiseColor & 0xff) - 128);
+          var a:Number = interpolate(altitude, x * SIZE/BIGSIZE, y * SIZE/BIGSIZE);
+
+          // Make sure that the noise never turns ocean into non-ocean or vice versa
+          if (a >= OCEAN_ALTITUDE) {
+            a += (((noiseColor >> 8) & 0xff) - 128);
+            if (a < OCEAN_ALTITUDE) {
+              a = OCEAN_ALTITUDE;
+            }
+          }
           
           detailMap.setPixel(x - baseX, y - baseY,
                              moistureAndAltitudeToColor(m, a));

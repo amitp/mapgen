@@ -209,12 +209,14 @@ package {
     }
 
     public function arrayToBitmap(v:Vector.<Vector.<int>>, b:BitmapData):void {
+      b.lock();
       for (var x:int = 0; x < SIZE; x++) {
         for (var y:int = 0; y < SIZE; y++) {
           var c:int = v[x][y];
           b.setPixel(x, y, (c << 16) | (c << 8) | c);
         }
       }
+      b.unlock();
     }
 
     public function spreadMoisture():void {
@@ -312,12 +314,14 @@ package {
     }
     
     public function channelsToColors():void {
+      map.lock();
       for (var x:int = 0; x < SIZE; x++) {
         for (var y:int = 0; y < SIZE; y++) {
           map.setPixel(x, y, moistureAndAltitudeToColor(moisture[x][y],
                                                         altitude[x][y]));
         }
       }
+      map.unlock();
     }
 
     public function generateDetailMap(centerX:Number, centerY:Number):void {

@@ -22,11 +22,11 @@ package {
     public var seed_button:TextField = new TextField();
     public var save_altitude_button:TextField = new TextField();
     public var save_moisture_button:TextField = new TextField();
-
     public var location_text:TextField = new TextField();
     
     public var altitude:Vector.<Vector.<int>> = make2dArray(SIZE, SIZE);
     public var moisture:Vector.<Vector.<int>> = make2dArray(SIZE, SIZE);
+    public var rivers:Vector.<Vector.<int>> = make2dArray(SIZE, SIZE);
     
     public var map:BitmapData = new BitmapData(SIZE, SIZE);
     public var detailMap:BitmapData = new BitmapData(DETAILSIZE, DETAILSIZE);
@@ -302,8 +302,6 @@ package {
     }
 
     public function carveCanyons():void {
-      var rivers:Vector.<Vector.<int>> = make2dArray(SIZE, SIZE);
-      
       for (var iteration:int = 0; iteration < 10000; iteration++) {
         var x:int = int(Math.floor(SIZE*Math.random()));
         var y:int = int(Math.floor(SIZE*Math.random()));
@@ -329,10 +327,10 @@ package {
           // Move the particle in that direction, and remove some land
           if (x == x2 && y == y2) {
             if (altitude[x][y] < 10) break;
-            altitude[x][y] = Math.min(255, altitude[x][y] + trail);
+            // altitude[x][y] = Math.min(255, altitude[x][y] + trail);
           }
           x = x2; y = y2;
-          // altitude[x][y] = Math.max(0, altitude[x][y] - 1);
+          altitude[x][y] = Math.max(0, altitude[x][y] - 1);
           rivers[x][y] += 1;
         }
       }
@@ -344,22 +342,28 @@ package {
       }
     }
 
-    public function moistureAndAltitudeToColor(m:Number, a:Number):int {
+    public function moistureAndAltitudeToColor(m:Number, a:Number, r:Number):int {
       var color:int = 0xff0000;
       
       if (a < OCEAN_ALTITUDE) color = 0x000099;
+      else if (a < OCEAN_ALTITUDE + 3) color = 0xc2bd8c;
+      else if (a < OCEAN_ALTITUDE + 5) color = 0xae8c4c;
       else if (a > 220) {
         if (a > 250) color = 0xffffff;
         else if (a > 240) color = 0xeeeeee;
-        else if (a > 230) color = 0xdddddd;
-        else color = 0xcccccc;
+        else if (a > 230) color = 0xddddcc;
+        else color = 0xccccaa;
         if (m > 150) color -= 0x331100;
       }
-      else if (m > 240) color = 0x669988;
-      else if (m > 200) color = 0x558866;
-      else if (m > 100) color = 0x446633;
-      else if (m > 50) color = 0xaaaa77;
-      else color = 0x998855;
+
+      else if (r > 10) color = 0x00cccc;
+
+      else if (m > 200) color = 0x56821b;
+      else if (m > 150) color = 0x3b8c43;
+      else if (m > 100)  color = 0x54653c;
+      else if (m > 50)  color = 0x334021;
+      else if (m > 20)  color = 0x989a2d;
+      else              color = 0xc2bd8c;
       
       return color;
     }
@@ -369,7 +373,8 @@ package {
       for (var x:int = 0; x < SIZE; x++) {
         for (var y:int = 0; y < SIZE; y++) {
           map.setPixel(x, y, moistureAndAltitudeToColor(moisture[x][y],
-                                                        altitude[x][y]));
+                                                        altitude[x][y] - (x+y)%2,
+                                                        rivers[x][y]));
         }
       }
       map.unlock();
@@ -422,7 +427,7 @@ package {
           }
           
           detailMap.setPixel(x - baseX, y - baseY,
-                             moistureAndAltitudeToColor(m, a));
+                             moistureAndAltitudeToColor(m, a, 0));
         }
       }
     }

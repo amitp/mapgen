@@ -13,6 +13,7 @@ package {
 
   public class mapgen extends Sprite {
     public static var SEED:int = 72689;
+    // 83980, 59695, 94400, 92697, 30628, 9146, 23896, 60489, 57078, 89680, 10377
     public static var OCEAN_ALTITUDE:int = 1;
     public static var SIZE:int = 256;
     public static var BIGSIZE:int = 2048;

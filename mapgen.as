@@ -9,6 +9,7 @@ package {
   import flash.text.*;
   import flash.events.*;
   import flash.utils.*;
+  import flash.net.*;
 
   public class mapgen extends Sprite {
     public static var SEED:int = 72689;
@@ -19,6 +20,8 @@ package {
 
     public var seed_text:TextField = new TextField();
     public var seed_button:TextField = new TextField();
+    public var save_altitude_button:TextField = new TextField();
+    public var save_moisture_button:TextField = new TextField();
 
     public var location_text:TextField = new TextField();
     
@@ -67,6 +70,32 @@ package {
                                      newMap();
                                    });
       addChild(seed_button);
+
+      save_altitude_button.text = "Save A";
+      save_altitude_button.background = true;
+      save_altitude_button.selectable = false;
+      save_altitude_button.x = 150;
+      save_altitude_button.y = seed_text.y;
+      save_altitude_button.autoSize = TextFieldAutoSize.LEFT;
+      save_altitude_button.filters = [new BevelFilter(1)];
+      save_altitude_button.addEventListener(MouseEvent.MOUSE_UP,
+                                   function (e:Event):void {
+                                     saveAltitudeMap();
+                                   });
+      addChild(save_altitude_button);
+
+      save_moisture_button.text = "Save M";
+      save_moisture_button.background = true;
+      save_moisture_button.selectable = false;
+      save_moisture_button.x = 200;
+      save_moisture_button.y = seed_text.y;
+      save_moisture_button.autoSize = TextFieldAutoSize.LEFT;
+      save_moisture_button.filters = [new BevelFilter(1)];
+      save_moisture_button.addEventListener(MouseEvent.MOUSE_UP,
+                                   function (e:Event):void {
+                                     saveMoistureMap();
+                                   });
+      addChild(save_moisture_button);
 
       b = new Bitmap(moistureBitmap);
       b.x = 0;
@@ -117,6 +146,26 @@ package {
       newMap();
     }
 
+    public function saveAltitudeMap():void {
+      // Save the altitude minimap (not the big map, where we don't have altitude)
+      new FileReference().save(flattenArray(altitude));
+    }
+
+    public function saveMoistureMap():void {
+      // Save the moisture minimap (not the big map)
+      new FileReference().save(flattenArray(moisture));
+    }
+
+    public function flattenArray(A:Vector.<Vector.<int>>):ByteArray {
+      var B:ByteArray = new ByteArray();
+      for (var x:int = 0; x < SIZE; x++) {
+        for (var y:int = 0; y < SIZE; y++) {
+          B.writeByte(A[x][y]);
+        }
+      }
+      return B;
+    }
+    
     public function onMapClick(event:MouseEvent):void {
       location_text.text = "" + event.localX + ", " + event.localY;
       generateDetailMap(event.localX, event.localY);

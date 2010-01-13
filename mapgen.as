@@ -170,15 +170,21 @@ package {
       location_text.text = "" + event.localX + ", " + event.localY;
       generateDetailMap(event.localX, event.localY);
     }
-    
+
     public function newMapEvent(event:Event):void {
       newMap();
     }
 
     public function newMap():void {
       generate();
+     
       //carveCanyons();
       spreadMoisture();
+      blurMoisture();
+     
+      spreadMoisture();
+      spreadMoisture();
+      //blurMoisture();
       
       channelsToColors();
       arrayToBitmap(moisture, moistureBitmap);
@@ -270,35 +276,69 @@ package {
       b.unlock();
     }
 
-    public function spreadMoisture():void {
-      var windX:Number = 455.0 * SIZE/BIGSIZE;
-      var windY:Number = 125.0 * SIZE/BIGSIZE;
+    public function blurMoisture():void {
+      var radius:int = 1;
+      var result:Vector.<Vector.<int>> = make2dArray(SIZE, SIZE);
       
       for (var x:int = 0; x < SIZE; x++) {
         for (var y:int = 0; y < SIZE; y++) {
+          var numer:int = 0;
+          var denom:int = 0;
+          for (var dx:int = -radius; dx <= +radius; dx++) {
+            for (var dy:int = -radius; dy <= +radius; dy++) {
+              if (0 <= x+dx && x+dx < SIZE && 0 <= y+dy && y+dy < SIZE) {
+                numer += moisture[x+dx][y+dy];
+                denom += 1;
+              }
+            }
+          }
+          result[x][y] = numer / denom;
+        }
+      }
+      moisture = result;
+    }
+    
+    public function spreadMoisture():void {
+      var windX:Number = 455.0 * SIZE/BIGSIZE;
+      var windY:Number = 125.0 * SIZE/BIGSIZE;
+
+      windX *= 0.3;
+      windY *= 0.3;
+      
+      var result:Vector.<Vector.<int>> = make2dArray(SIZE, SIZE);
+      for (var x:int = 0; x < SIZE; x++) {
+        for (var y:int = 0; y < SIZE; y++) {
           if (altitude[x][y] < OCEAN_ALTITUDE) {
-            moisture[x][y] = 255; // ocean
+            result[x][y] += 255; // ocean
           }
           
-          var w:Number = Math.random();
+          result[x][y] += moisture[x][y];
+
+          var w:Number = 0.4 * (Math.random() + Math.random() + Math.random());
           var x2:int = x + int(windX * w);
           var y2:int = y + int(windY * w);
           if (0 <= x2 && x2 < SIZE
               && 0 <= y2 && y2 < SIZE
               && x != x2 && y != y2) {
             var transfer:int = moisture[x][y]/3;
-            var speed:Number = (10.0 + altitude[x][y]) / (10.0 + altitude[x2][y2]);
+            var speed:Number = (30.0 + altitude[x][y]) / (30.0 + altitude[x2][y2]);
             /* speed is higher if going downhill */
             transfer = int(transfer * speed);
             
-            if (transfer + moisture[x2][y2] > 255) {
-              transfer = 255 - moisture[x2][y2];
-            }
-            moisture[x][y] -= transfer;
-            moisture[x2][y2] += transfer;
+            result[x][y] -= transfer;
+            result[x2][y2] += transfer;
           }
         }
       }
+
+      for (x = 0; x < SIZE; x++) {
+        for (y = 0; y < SIZE; y++) {
+          if (result[x][y] < 0) result[x][y] = 0;
+          if (result[x][y] > 255) result[x][y] = 255;
+        }
+      }
+      
+      moisture = result;
     }
 
     public function carveCanyons():void {

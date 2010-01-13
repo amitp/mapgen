@@ -15,7 +15,7 @@ package {
     public static var SEED:int = 72689;
     public static var OCEAN_ALTITUDE:int = 1;
     public static var SIZE:int = 256;
-    public static var BIGSIZE:int = 8192;
+    public static var BIGSIZE:int = 2048;
     public static var DETAILSIZE:int = 64;
 
     public var seed_text:TextField = new TextField();
@@ -376,8 +376,9 @@ package {
     }
 
     public function generateDetailMap(centerX:Number, centerY:Number):void {
-      var noise:BitmapData = new BitmapData(BIGSIZE/SIZE, BIGSIZE/SIZE);
-      var noiseScale:int = 60; // out of 128
+      var NOISESIZE:int = 70;
+      var noise:BitmapData = new BitmapData(NOISESIZE, NOISESIZE);
+      var noiseScale:int = 1; // out of 128
       noise.noise(SEED, 128-noiseScale, 128+noiseScale);
 
       // We want to fill an area DETAILSIZE x DETAILSIZE by combining
@@ -407,7 +408,7 @@ package {
           // The moisture and altitude at x,y will be based on the
           // coarse map, plus the noise scaled by some constant
 
-          var noiseColor:int = noise.getPixel(x % (BIGSIZE/SIZE), y % (BIGSIZE/SIZE));
+          var noiseColor:int = noise.getPixel(x % NOISESIZE, y % NOISESIZE);
 
           var m:Number = interpolate(moisture, x * SIZE/BIGSIZE, y * SIZE/BIGSIZE) + ((noiseColor & 0xff) - 128);
           var a:Number = interpolate(altitude, x * SIZE/BIGSIZE, y * SIZE/BIGSIZE);

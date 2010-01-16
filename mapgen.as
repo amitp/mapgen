@@ -24,6 +24,8 @@ package {
     public var save_altitude_button:TextField = new TextField();
     public var save_moisture_button:TextField = new TextField();
     public var location_text:TextField = new TextField();
+    public var moisture_iterations:TextField = new TextField();
+    public var generate_button:TextField = new TextField();
     
     public var altitude:Vector.<Vector.<int>> = make2dArray(SIZE, SIZE);
     public var moisture:Vector.<Vector.<int>> = make2dArray(SIZE, SIZE);
@@ -180,13 +182,12 @@ package {
       generate();
      
       //carveCanyons();
-      spreadMoisture();
-      blurMoisture();
+
+      for (var i:int = 0; i < int(moisture_iterations.text); i++) {
+        spreadMoisture();
+        //blurMoisture();
+      }
      
-      spreadMoisture();
-      spreadMoisture();
-      //blurMoisture();
-      
       channelsToColors();
       arrayToBitmap(moisture, moistureBitmap);
       arrayToBitmap(altitude, altitudeBitmap);
@@ -300,12 +301,9 @@ package {
     }
     
     public function spreadMoisture():void {
-      var windX:Number = 455.0 * SIZE/BIGSIZE;
-      var windY:Number = 125.0 * SIZE/BIGSIZE;
+      var windX:Number = 250.0 * SIZE/BIGSIZE;
+      var windY:Number = 120.0 * SIZE/BIGSIZE;
 
-      windX *= 0.3;
-      windY *= 0.3;
-      
       var result:Vector.<Vector.<int>> = make2dArray(SIZE, SIZE);
       for (var x:int = 0; x < SIZE; x++) {
         for (var y:int = 0; y < SIZE; y++) {
@@ -315,15 +313,18 @@ package {
           
           result[x][y] += moisture[x][y];
 
-          var w:Number = 0.4 * (Math.random() + Math.random() + Math.random());
-          var x2:int = x + int(windX * w);
-          var y2:int = y + int(windY * w);
+          var wx:Number = 0.1 * (8.0 + Math.random() + Math.random());
+          var wy:Number = 0.1 * (8.0 + Math.random() + Math.random());
+          var x2:int = x + int(windX * wx);
+          var y2:int = y + int(windY * wy);
+          x2 %= SIZE; y2 %= SIZE;
           if (0 <= x2 && x2 < SIZE
               && 0 <= y2 && y2 < SIZE
               && x != x2 && y != y2) {
             var transfer:int = moisture[x][y]/3;
             var speed:Number = (30.0 + altitude[x][y]) / (30.0 + altitude[x2][y2]);
-            /* speed is higher if going downhill */
+            if (speed > 1.0) speed = 1.0;
+            /* speed is lower if going uphill */
             transfer = int(transfer * speed);
             
             result[x][y] -= transfer;

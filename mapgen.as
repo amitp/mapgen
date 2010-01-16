@@ -230,15 +230,15 @@ package {
       var b:BitmapData = new BitmapData(SIZE, SIZE);
       b.perlinNoise(SIZE, SIZE, 8, SEED, false, false);
 
-      equalizeTerrain(b);
-      
       var s:Shape = new Shape();
 
+      equalizeTerrain(b);
+      
       var m:Matrix = new Matrix();
       m.createGradientBox(SIZE, SIZE, 0, 0, 0);
       s.graphics.beginGradientFill(GradientType.RADIAL,
                                    [0x000000, 0x000000],
-                                   [0.0, 0.2],
+                                   [0.0, 0.3],
                                    [0x00, 0xff],
                                    m,
                                    SpreadMethod.PAD);
@@ -246,11 +246,13 @@ package {
       s.graphics.endFill();
       b.draw(s);
 
+      /*
       s.graphics.clear();
-      s.graphics.beginFill(0xffffff, 0.2);
+      s.graphics.beginFill(0xffffff, 0.0);
       s.graphics.drawRect(10, 10, SIZE-2*10, SIZE-2*10);
       s.graphics.endFill();
       b.draw(s);
+      */
       
       equalizeTerrain(b);
 
@@ -421,7 +423,7 @@ package {
       var color:int = 0xff0000;
       
       if (a < OCEAN_ALTITUDE) color = 0x000099;
-      else if (a < OCEAN_ALTITUDE + 3) color = 0xc2bd8c;
+      //else if (a < OCEAN_ALTITUDE + 3) color = 0xc2bd8c;
       else if (a < OCEAN_ALTITUDE + 5) color = 0xae8c4c;
       else if (a > 220) {
         if (a > 250) color = 0xffffff;
@@ -448,7 +450,7 @@ package {
       for (var x:int = 0; x < SIZE; x++) {
         for (var y:int = 0; y < SIZE; y++) {
           map.setPixel(x, y, moistureAndAltitudeToColor(moisture[x][y],
-                                                        altitude[x][y] - (x+y)%2,
+                                                        altitude[x][y] * (1.0 + 0.1*((x+y)%2)),
                                                         rivers[x][y]));
         }
       }

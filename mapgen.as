@@ -32,6 +32,7 @@ package {
     public var rivers:Vector.<Vector.<int>> = make2dArray(SIZE, SIZE);
     
     public var map:BitmapData = new BitmapData(SIZE, SIZE);
+    public var lightingMap:BitmapData = new BitmapData(SIZE, SIZE);
     public var detailMap:BitmapData = new BitmapData(DETAILSIZE, DETAILSIZE);
     public var moistureBitmap:BitmapData = new BitmapData(SIZE, SIZE);
     public var altitudeBitmap:BitmapData = new BitmapData(SIZE, SIZE);
@@ -131,6 +132,7 @@ package {
                              });
         
       s.addChild(new Bitmap(map));
+      s.addChild(new Bitmap(lightingMap)).blendMode = BlendMode.HARDLIGHT;
       addChild(s);
 
       location_text.text = "(detail map) ==>";
@@ -189,6 +191,7 @@ package {
       }
      
       channelsToColors();
+      channelsToLighting();
       arrayToBitmap(moisture, moistureBitmap);
       arrayToBitmap(altitude, altitudeBitmap);
     }
@@ -420,6 +423,21 @@ package {
         }
       }
       map.unlock();
+    }
+
+    public function channelsToLighting():void {
+      // From the altitude map, generate a light map that highlights
+      // northwest sides of hills. Then blur it all to remove sharp edges.
+      lightingMap.lock();
+      arrayToBitmap(altitude, lightingMap);
+      lightingMap.applyFilter(lightingMap, lightingMap.rect, new Point(0, 0),
+                              new ConvolutionFilter
+                              (3, 3, [-2, -1, 0,
+                                      -1, 0, +1,
+                                      0, +1, +2], 3.0, 127));
+      lightingMap.applyFilter(lightingMap, lightingMap.rect, new Point(0, 0),
+                              new BlurFilter());
+      lightingMap.unlock();
     }
 
     public function generateDetailMap(centerX:Number, centerY:Number):void {

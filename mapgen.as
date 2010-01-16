@@ -2,6 +2,12 @@
 // Author: amitp@cs.stanford.edu
 // License: MIT
 
+// TODO:
+// 1. break up generation into stages (low res, then high res, then wind)
+// 2. link stages to onEnterFrame so that the system isn't unresponsive
+// 3. make lighting size-independent
+// 4. make blurring optional
+
 package {
   import flash.geom.*;
   import flash.display.*;
@@ -13,7 +19,7 @@ package {
 
   public class mapgen extends Sprite {
     public static var SEED:int = 72689;
-    // 83980, 59695, 94400, 92697, 30628, 9146, 23896, 60489, 57078, 89680, 10377
+    // 83980, 59695, 94400, 92697, 30628, 9146, 23896, 60489, 57078, 89680, 10377, 42612, 29732
     public static var OCEAN_ALTITUDE:int = 1;
     public static var SIZE:int = 256;
     public static var BIGSIZE:int = 2048;
@@ -181,6 +187,7 @@ package {
     }
 
     public function newMap():void {
+      location_text.text = "(generating)";
       generate();
      
       //carveCanyons();
@@ -194,6 +201,7 @@ package {
       channelsToLighting();
       arrayToBitmap(moisture, moistureBitmap);
       arrayToBitmap(altitude, altitudeBitmap);
+      location_text.text = "";
     }
     
     public function generate():void {
@@ -282,6 +290,7 @@ package {
     }
 
     public function blurMoisture():void {
+      // Note: this isn't scale-independent :(
       var radius:int = 1;
       var result:Vector.<Vector.<int>> = make2dArray(SIZE, SIZE);
       
@@ -430,6 +439,10 @@ package {
       // northwest sides of hills. Then blur it all to remove sharp edges.
       lightingMap.lock();
       arrayToBitmap(altitude, lightingMap);
+      // NOTE: the scale for the lighting should be changed depending
+      // on the map size but it's not clear in what way. Alternatively
+      // we could rescale the lightingMap to a fixed size and always
+      // use that for lighting.
       lightingMap.applyFilter(lightingMap, lightingMap.rect, new Point(0, 0),
                               new ConvolutionFilter
                               (3, 3, [-2, -1, 0,

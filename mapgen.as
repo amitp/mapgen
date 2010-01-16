@@ -53,26 +53,59 @@ package {
       graphics.drawRect(-1000, -1000, 2000, 2000);
       graphics.endFill();
 
-      seed_text.text = "" + SEED;
-      seed_text.background = true;
-      seed_text.autoSize = TextFieldAutoSize.LEFT;
-      seed_text.type = TextFieldType.INPUT;
-      seed_text.restrict = "0-9";
-      seed_text.y = 2;
-      seed_text.addEventListener(KeyboardEvent.KEY_UP,
-                                 function (e:Event):void {
-                                   SEED = int(seed_text.text);
-                                   newMap();
-                                 });
-      addChild(seed_text);
+      function createLabel(text:String, x:int, y:int):TextField {
+        var t:TextField = new TextField();
+        t.text = text;
+        t.width = 0;
+        t.x = x;
+        t.y = y;
+        t.autoSize = TextFieldAutoSize.RIGHT;
+        t.selectable = false;
+        return t;
+      }
+      
+      function changeIntoEditable(field:TextField, text:String):void {
+        field.text = text;
+        field.background = true;
+        field.autoSize = TextFieldAutoSize.LEFT;
+        field.type = TextFieldType.INPUT;
+      }
+      
+      function changeIntoButton(button:TextField, text:String):void {
+        button.text = text;
+        button.background = true;
+        button.selectable = false;
+        button.autoSize = TextFieldAutoSize.LEFT;
+        button.filters = [new BevelFilter(1)];
+      }
 
-      seed_button.text = "Random";
-      seed_button.background = true;
-      seed_button.selectable = false;
-      seed_button.x = 75;
-      seed_button.y = seed_text.y;
-      seed_button.autoSize = TextFieldAutoSize.LEFT;
-      seed_button.filters = [new BevelFilter(1)];
+      changeIntoEditable(seed_text, "" + SEED);
+      seed_text.restrict = "0-9";
+      seed_text.x = 180;
+      seed_text.y = 50;
+      addChild(seed_text);
+      addChild(createLabel("Seed:", 180, 50));
+               
+      changeIntoEditable(moisture_iterations, "6");
+      moisture_iterations.restrict = "0-9";
+      moisture_iterations.x = 180;
+      moisture_iterations.y = 80;
+      addChild(moisture_iterations);
+      addChild(createLabel("Wind iter:", 180, 80));
+
+      changeIntoButton(generate_button, " Update ");
+      generate_button.x = 160;
+      generate_button.y = 120;
+      generate_button.addEventListener(MouseEvent.MOUSE_UP,
+                                       function (e:Event):void {
+                                         SEED = int(seed_text.text);
+                                         newMap();
+                                       });
+      addChild(generate_button);
+
+      changeIntoButton(seed_button, " Random seed ");
+      seed_button.x = 160;
+      seed_button.y = 160;
       seed_button.addEventListener(MouseEvent.MOUSE_UP,
                                    function (e:Event):void {
                                      SEED = int(100000*Math.random());
@@ -81,26 +114,18 @@ package {
                                    });
       addChild(seed_button);
 
-      save_altitude_button.text = "Save A";
-      save_altitude_button.background = true;
-      save_altitude_button.selectable = false;
-      save_altitude_button.x = 150;
-      save_altitude_button.y = seed_text.y;
-      save_altitude_button.autoSize = TextFieldAutoSize.LEFT;
-      save_altitude_button.filters = [new BevelFilter(1)];
+      changeIntoButton(save_altitude_button, " Export Altitude ");
+      save_altitude_button.x = 160;
+      save_altitude_button.y = 220;
       save_altitude_button.addEventListener(MouseEvent.MOUSE_UP,
                                    function (e:Event):void {
                                      saveAltitudeMap();
                                    });
       addChild(save_altitude_button);
 
-      save_moisture_button.text = "Save M";
-      save_moisture_button.background = true;
-      save_moisture_button.selectable = false;
-      save_moisture_button.x = 200;
-      save_moisture_button.y = seed_text.y;
-      save_moisture_button.autoSize = TextFieldAutoSize.LEFT;
-      save_moisture_button.filters = [new BevelFilter(1)];
+      changeIntoButton(save_moisture_button, " Export Moisture ");
+      save_moisture_button.x = 160;
+      save_moisture_button.y = 240;
       save_moisture_button.addEventListener(MouseEvent.MOUSE_UP,
                                    function (e:Event):void {
                                      saveMoistureMap();
@@ -180,10 +205,6 @@ package {
     public function onMapClick(event:MouseEvent):void {
       location_text.text = "" + event.localX + ", " + event.localY;
       generateDetailMap(event.localX, event.localY);
-    }
-
-    public function newMapEvent(event:Event):void {
-      newMap();
     }
 
     public function newMap():void {

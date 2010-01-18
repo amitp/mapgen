@@ -458,6 +458,9 @@ class Map {
     // histogram correction after we convert to the altitude[]
     // array, although even there it's already been discretized :(
     bitmap.applyFilter(bitmap, bitmap.rect, new Point(0, 0), new BlurFilter());
+
+    // TODO: if we ever want to run equalizeTerrain after
+    // spreadMoisture, we need to special-case water=255 (leave it alone)
   }
   
   public function make2dArray(w:int, h:int):Vector.<Vector.<int>> {
@@ -497,7 +500,8 @@ class Map {
   public function spreadMoisture():void {
     var windX:Number = 250.0 * SIZE/mapgen.BIGSIZE;
     var windY:Number = 120.0 * SIZE/mapgen.BIGSIZE;
-
+    var evaporation:int = 1;
+    
     var result:Vector.<Vector.<int>> = make2dArray(SIZE, SIZE);
     for (var x:int = 0; x < SIZE; x++) {
       for (var y:int = 0; y < SIZE; y++) {
@@ -505,7 +509,7 @@ class Map {
           result[x][y] += 255; // ocean
         }
         
-        result[x][y] += moisture[x][y];
+        result[x][y] += moisture[x][y] - evaporation;
 
         var wx:Number = 0.1 * (8.0 + Math.random() + Math.random());
         var wy:Number = 0.1 * (8.0 + Math.random() + Math.random());

@@ -32,18 +32,20 @@ package {
     public var location_text:TextField = new TextField();
     public var moisture_iterations:TextField = new TextField();
     public var generate_button:TextField = new TextField();
-    
-    public var altitude:Vector.<Vector.<int>> = make2dArray(SIZE, SIZE);
-    public var moisture:Vector.<Vector.<int>> = make2dArray(SIZE, SIZE);
-    public var rivers:Vector.<Vector.<int>> = make2dArray(SIZE, SIZE);
-    
-    public var map:BitmapData = new BitmapData(SIZE, SIZE);
-    public var lightingMap:BitmapData = new BitmapData(SIZE, SIZE);
+
+    public var map:Map = new Map(SIZE, SEED);
     public var detailMap:BitmapData = new BitmapData(DETAILSIZE, DETAILSIZE);
-    public var moistureBitmap:BitmapData = new BitmapData(SIZE, SIZE);
-    public var altitudeBitmap:BitmapData = new BitmapData(SIZE, SIZE);
+    public var colorMap:BitmapData;
+    public var lightingMap:BitmapData;
+    public var moistureBitmap:BitmapData;
+    public var altitudeBitmap:BitmapData;
     
     public function mapgen() {
+      colorMap = new BitmapData(SIZE, SIZE);
+      lightingMap = new BitmapData(SIZE, SIZE);
+      moistureBitmap = new BitmapData(SIZE, SIZE);
+      altitudeBitmap = new BitmapData(SIZE, SIZE);
+      
       stage.scaleMode = "noScale";
       stage.align = "TL";
       
@@ -98,7 +100,7 @@ package {
       generate_button.y = 120;
       generate_button.addEventListener(MouseEvent.MOUSE_UP,
                                        function (e:Event):void {
-                                         SEED = int(seed_text.text);
+                                         map.SEED = int(seed_text.text);
                                          newMap();
                                        });
       addChild(generate_button);
@@ -108,8 +110,8 @@ package {
       seed_button.y = 160;
       seed_button.addEventListener(MouseEvent.MOUSE_UP,
                                    function (e:Event):void {
-                                     SEED = int(100000*Math.random());
-                                     seed_text.text = "" + SEED;
+                                     map.SEED = int(100000*Math.random());
+                                     seed_text.text = "" + map.SEED;
                                      newMap();
                                    });
       addChild(seed_button);
@@ -162,7 +164,7 @@ package {
                                s.removeEventListener(MouseEvent.MOUSE_MOVE, onMapClick);
                              });
         
-      s.addChild(new Bitmap(map));
+      s.addChild(new Bitmap(colorMap));
       s.addChild(new Bitmap(lightingMap)).blendMode = BlendMode.HARDLIGHT;
       addChild(s);
 
@@ -184,18 +186,18 @@ package {
 
     public function saveAltitudeMap():void {
       // Save the altitude minimap (not the big map, where we don't have altitude)
-      new FileReference().save(flattenArray(altitude));
+      new FileReference().save(flattenArray(map.altitude, SIZE));
     }
 
     public function saveMoistureMap():void {
       // Save the moisture minimap (not the big map)
-      new FileReference().save(flattenArray(moisture));
+      new FileReference().save(flattenArray(map.moisture, SIZE));
     }
 
-    public function flattenArray(A:Vector.<Vector.<int>>):ByteArray {
+    public function flattenArray(A:Vector.<Vector.<int>>, size:int):ByteArray {
       var B:ByteArray = new ByteArray();
-      for (var x:int = 0; x < SIZE; x++) {
-        for (var y:int = 0; y < SIZE; y++) {
+      for (var x:int = 0; x < size; x++) {
+        for (var y:int = 0; y < size; y++) {
           B.writeByte(A[x][y]);
         }
       }
@@ -209,98 +211,22 @@ package {
 
     public function newMap():void {
       location_text.text = "(generating)";
-      generate();
+      map.generate();
      
-      //carveCanyons();
+      //map.carveCanyons();
 
       for (var i:int = 0; i < int(moisture_iterations.text); i++) {
-        spreadMoisture();
-        //blurMoisture();
+        map.spreadMoisture();
+        //map.blurMoisture();
       }
      
       channelsToColors();
       channelsToLighting();
-      arrayToBitmap(moisture, moistureBitmap);
-      arrayToBitmap(altitude, altitudeBitmap);
+      arrayToBitmap(map.moisture, moistureBitmap);
+      arrayToBitmap(map.altitude, altitudeBitmap);
       location_text.text = "";
     }
     
-    public function generate():void {
-      // Generate 3-channel perlin noise and copy 2 of the channels out
-      var b:BitmapData = new BitmapData(SIZE, SIZE);
-      b.perlinNoise(SIZE, SIZE, 8, SEED, false, false);
-
-      var s:Shape = new Shape();
-
-      equalizeTerrain(b);
-      
-      var m:Matrix = new Matrix();
-      m.createGradientBox(SIZE, SIZE, 0, 0, 0);
-      s.graphics.beginGradientFill(GradientType.RADIAL,
-                                   [0x000000, 0x000000],
-                                   [0.0, 0.3],
-                                   [0x00, 0xff],
-                                   m,
-                                   SpreadMethod.PAD);
-      s.graphics.drawRect(0, 0, SIZE, SIZE);
-      s.graphics.endFill();
-      b.draw(s);
-
-      /*
-      s.graphics.clear();
-      s.graphics.beginFill(0xffffff, 0.0);
-      s.graphics.drawRect(10, 10, SIZE-2*10, SIZE-2*10);
-      s.graphics.endFill();
-      b.draw(s);
-      */
-      
-      equalizeTerrain(b);
-
-      
-      // Extract information from bitmap
-      for (var x:int = 0; x < SIZE; x++) {
-        for (var y:int = 0; y < SIZE; y++) {
-          var c:int = b.getPixel(x, y);
-          altitude[x][y] = (c >> 8) & 0xff;
-          moisture[x][y] = c & 0xff;
-        }
-      }
-    }
-
-    public function equalizeTerrain(b:BitmapData):void {
-      // Adjust altitude histogram so that it's roughly quadratic
-      var histograms:Vector.<Vector.<Number>> = b.histogram(b.rect);
-      var A:Vector.<Number> = histograms[1];
-      var k:int = 0;
-      var green:Array = new Array(256);
-      var cumsum:Number = 0.0;
-      for (var i:int = 0; i < 256; i++) {
-        cumsum += A[i];
-        green[i] = (k*k/256) << 8; // int to green color value
-        while (cumsum > SIZE*SIZE*Math.sqrt(k/256.0) && k < 255) {
-          k++;
-        }
-      }
-      b.paletteMap(b, b.rect, new Point(0, 0), null, green, null, null);
-      
-      // Blur everything because the quadratic shift introduces
-      // discreteness -- ick!!  TODO: probably better to apply the
-      // histogram correction after we convert to the altitude[]
-      // array, although even there it's already been discretized :(
-      b.applyFilter(b, b.rect, new Point(0, 0), new BlurFilter());
-    }
-    
-    public function make2dArray(w:int, h:int):Vector.<Vector.<int>> {
-      var v:Vector.<Vector.<int>> = new Vector.<Vector.<int>>(w);
-      for (var x:int = 0; x < w; x++) {
-        v[x] = new Vector.<int>(h);
-        for (var y:int = 0; y < h; y++) {
-          v[x][y] = 0;
-        }
-      }
-      return v;
-    }
-
     public function arrayToBitmap(v:Vector.<Vector.<int>>, b:BitmapData):void {
       b.lock();
       for (var x:int = 0; x < SIZE; x++) {
@@ -312,112 +238,6 @@ package {
       b.unlock();
     }
 
-    public function blurMoisture():void {
-      // Note: this isn't scale-independent :(
-      var radius:int = 1;
-      var result:Vector.<Vector.<int>> = make2dArray(SIZE, SIZE);
-      
-      for (var x:int = 0; x < SIZE; x++) {
-        for (var y:int = 0; y < SIZE; y++) {
-          var numer:int = 0;
-          var denom:int = 0;
-          for (var dx:int = -radius; dx <= +radius; dx++) {
-            for (var dy:int = -radius; dy <= +radius; dy++) {
-              if (0 <= x+dx && x+dx < SIZE && 0 <= y+dy && y+dy < SIZE) {
-                numer += moisture[x+dx][y+dy];
-                denom += 1;
-              }
-            }
-          }
-          result[x][y] = numer / denom;
-        }
-      }
-      moisture = result;
-    }
-    
-    public function spreadMoisture():void {
-      var windX:Number = 250.0 * SIZE/BIGSIZE;
-      var windY:Number = 120.0 * SIZE/BIGSIZE;
-
-      var result:Vector.<Vector.<int>> = make2dArray(SIZE, SIZE);
-      for (var x:int = 0; x < SIZE; x++) {
-        for (var y:int = 0; y < SIZE; y++) {
-          if (altitude[x][y] < OCEAN_ALTITUDE) {
-            result[x][y] += 255; // ocean
-          }
-          
-          result[x][y] += moisture[x][y];
-
-          var wx:Number = 0.1 * (8.0 + Math.random() + Math.random());
-          var wy:Number = 0.1 * (8.0 + Math.random() + Math.random());
-          var x2:int = x + int(windX * wx);
-          var y2:int = y + int(windY * wy);
-          x2 %= SIZE; y2 %= SIZE;
-          if (0 <= x2 && x2 < SIZE
-              && 0 <= y2 && y2 < SIZE
-              && x != x2 && y != y2) {
-            var transfer:int = moisture[x][y]/3;
-            var speed:Number = (30.0 + altitude[x][y]) / (30.0 + altitude[x2][y2]);
-            if (speed > 1.0) speed = 1.0;
-            /* speed is lower if going uphill */
-            transfer = int(transfer * speed);
-            
-            result[x][y] -= transfer;
-            result[x2][y2] += transfer;
-          }
-        }
-      }
-
-      for (x = 0; x < SIZE; x++) {
-        for (y = 0; y < SIZE; y++) {
-          if (result[x][y] < 0) result[x][y] = 0;
-          if (result[x][y] > 255) result[x][y] = 255;
-        }
-      }
-      
-      moisture = result;
-    }
-
-    public function carveCanyons():void {
-      for (var iteration:int = 0; iteration < 10000; iteration++) {
-        var x:int = int(Math.floor(SIZE*Math.random()));
-        var y:int = int(Math.floor(SIZE*Math.random()));
-
-        for (var trail:int = 0; trail < 1000; trail++) {
-          // Just quit at the boundaries
-          if (x == 0 || x == SIZE-1 || y == 0 || y == SIZE-1) {
-            break;
-          }
-
-          // Find the minimum neighbor
-          var x2:int = x, y2:int = y;
-          for (var dx:int = -1; dx <= +1; dx++) {
-            for (var dy:int = -1; dy <= +1; dy++) {
-              if (altitude[x+dx][y+dy] < altitude[x2][y2]) {
-                x2 = x+dx; y2 = y+dy;
-              }
-            }
-          }
-
-          // TODO: make the river keep going to the ocean no matter what!
-          
-          // Move the particle in that direction, and remove some land
-          if (x == x2 && y == y2) {
-            if (altitude[x][y] < 10) break;
-            // altitude[x][y] = Math.min(255, altitude[x][y] + trail);
-          }
-          x = x2; y = y2;
-          altitude[x][y] = Math.max(0, altitude[x][y] - 1);
-          rivers[x][y] += 1;
-        }
-      }
-
-      for (x = 0; x < SIZE; x++) {
-        for (y = 0; y < SIZE; y++) {
-          if (rivers[x][y] > 100) moisture[x][y] = 255;
-        }
-      }
-    }
 
     public function moistureAndAltitudeToColor(m:Number, a:Number, r:Number):int {
       var color:int = 0xff0000;
@@ -446,22 +266,24 @@ package {
     }
     
     public function channelsToColors():void {
-      map.lock();
+      colorMap.lock();
       for (var x:int = 0; x < SIZE; x++) {
         for (var y:int = 0; y < SIZE; y++) {
-          map.setPixel(x, y, moistureAndAltitudeToColor(moisture[x][y],
-                                                        altitude[x][y] * (1.0 + 0.1*((x+y)%2)),
-                                                        rivers[x][y]));
+          colorMap.setPixel
+            (x, y,
+             moistureAndAltitudeToColor(map.moisture[x][y],
+                                        map.altitude[x][y] * (1.0 + 0.1*((x+y)%2)),
+                                        map.rivers[x][y]));
         }
       }
-      map.unlock();
+      colorMap.unlock();
     }
 
     public function channelsToLighting():void {
       // From the altitude map, generate a light map that highlights
       // northwest sides of hills. Then blur it all to remove sharp edges.
       lightingMap.lock();
-      arrayToBitmap(altitude, lightingMap);
+      arrayToBitmap(map.altitude, lightingMap);
       // NOTE: the scale for the lighting should be changed depending
       // on the map size but it's not clear in what way. Alternatively
       // we could rescale the lightingMap to a fixed size and always
@@ -480,7 +302,7 @@ package {
       var NOISESIZE:int = 70;
       var noise:BitmapData = new BitmapData(NOISESIZE, NOISESIZE);
       var noiseScale:int = 1; // out of 128
-      noise.noise(SEED, 128-noiseScale, 128+noiseScale);
+      noise.noise(map.SEED, 128-noiseScale, 128+noiseScale);
 
       // We want to fill an area DETAILSIZE x DETAILSIZE by combining
       // the base moisture and altitude levels with the noise function
@@ -511,8 +333,10 @@ package {
 
           var noiseColor:int = noise.getPixel(x % NOISESIZE, y % NOISESIZE);
 
-          var m:Number = interpolate(moisture, x * SIZE/BIGSIZE, y * SIZE/BIGSIZE) + ((noiseColor & 0xff) - 128);
-          var a:Number = interpolate(altitude, x * SIZE/BIGSIZE, y * SIZE/BIGSIZE);
+          var m:Number = interpolate(map.moisture,
+                                     x * SIZE/BIGSIZE, y * SIZE/BIGSIZE) + ((noiseColor & 0xff) - 128);
+          var a:Number = interpolate(map.altitude,
+                                     x * SIZE/BIGSIZE, y * SIZE/BIGSIZE);
 
           // Make sure that the noise never turns ocean into non-ocean or vice versa
           if (a >= OCEAN_ALTITUDE) {
@@ -529,3 +353,208 @@ package {
     }
   }
 }
+
+import flash.display.*;
+import flash.geom.*;
+import flash.filters.*;
+
+class Map {
+  public var SIZE:int;
+  public var SEED:int;
+  
+  public var altitude:Vector.<Vector.<int>>;
+  public var moisture:Vector.<Vector.<int>>;
+  public var rivers:Vector.<Vector.<int>>;
+  
+  function Map(size:int, seed:int) {
+    SIZE = size;
+    SEED = seed;
+    altitude = make2dArray(SIZE, SIZE);
+    moisture = make2dArray(SIZE, SIZE);
+    rivers =  make2dArray(SIZE, SIZE);
+  }
+  
+  public function generate():void {
+    // Generate 3-channel perlin noise and copy 2 of the channels out
+    var b:BitmapData = new BitmapData(SIZE, SIZE);
+    b.perlinNoise(SIZE, SIZE, 8, SEED, false, false);
+    
+    var s:Shape = new Shape();
+    
+    equalizeTerrain(b);
+    
+    var m:Matrix = new Matrix();
+    m.createGradientBox(SIZE, SIZE, 0, 0, 0);
+    s.graphics.beginGradientFill(GradientType.RADIAL,
+                                 [0x000000, 0x000000],
+                                 [0.0, 0.3],
+                                 [0x00, 0xff],
+                                 m,
+                                 SpreadMethod.PAD);
+    s.graphics.drawRect(0, 0, SIZE, SIZE);
+    s.graphics.endFill();
+    b.draw(s);
+    
+    /*
+      s.graphics.clear();
+      s.graphics.beginFill(0xffffff, 0.0);
+      s.graphics.drawRect(10, 10, SIZE-2*10, SIZE-2*10);
+      s.graphics.endFill();
+      b.draw(s);
+    */
+    
+    equalizeTerrain(b);
+    
+    
+    // Extract information from bitmap
+    for (var x:int = 0; x < SIZE; x++) {
+      for (var y:int = 0; y < SIZE; y++) {
+        var c:int = b.getPixel(x, y);
+        altitude[x][y] = (c >> 8) & 0xff;
+        moisture[x][y] = c & 0xff;
+      }
+    }
+  }
+  
+  public function equalizeTerrain(b:BitmapData):void {
+    // Adjust altitude histogram so that it's roughly quadratic
+    var histograms:Vector.<Vector.<Number>> = b.histogram(b.rect);
+    var A:Vector.<Number> = histograms[1];
+    var k:int = 0;
+    var green:Array = new Array(256);
+    var cumsum:Number = 0.0;
+    for (var i:int = 0; i < 256; i++) {
+      cumsum += A[i];
+      green[i] = (k*k/256) << 8; // int to green color value
+      while (cumsum > SIZE*SIZE*Math.sqrt(k/256.0) && k < 255) {
+        k++;
+      }
+    }
+    b.paletteMap(b, b.rect, new Point(0, 0), null, green, null, null);
+    
+    // Blur everything because the quadratic shift introduces
+    // discreteness -- ick!!  TODO: probably better to apply the
+    // histogram correction after we convert to the altitude[]
+    // array, although even there it's already been discretized :(
+    b.applyFilter(b, b.rect, new Point(0, 0), new BlurFilter());
+  }
+  
+  public function make2dArray(w:int, h:int):Vector.<Vector.<int>> {
+    var v:Vector.<Vector.<int>> = new Vector.<Vector.<int>>(w);
+    for (var x:int = 0; x < w; x++) {
+      v[x] = new Vector.<int>(h);
+      for (var y:int = 0; y < h; y++) {
+        v[x][y] = 0;
+      }
+    }
+    return v;
+  }
+  
+  public function blurMoisture():void {
+    // Note: this isn't scale-independent :(
+    var radius:int = 1;
+    var result:Vector.<Vector.<int>> = make2dArray(SIZE, SIZE);
+    
+    for (var x:int = 0; x < SIZE; x++) {
+      for (var y:int = 0; y < SIZE; y++) {
+        var numer:int = 0;
+        var denom:int = 0;
+        for (var dx:int = -radius; dx <= +radius; dx++) {
+          for (var dy:int = -radius; dy <= +radius; dy++) {
+            if (0 <= x+dx && x+dx < SIZE && 0 <= y+dy && y+dy < SIZE) {
+              numer += moisture[x+dx][y+dy];
+              denom += 1;
+            }
+          }
+        }
+        result[x][y] = numer / denom;
+      }
+    }
+    moisture = result;
+  }
+  
+  public function spreadMoisture():void {
+    var windX:Number = 250.0 * SIZE/mapgen.BIGSIZE;
+    var windY:Number = 120.0 * SIZE/mapgen.BIGSIZE;
+
+    var result:Vector.<Vector.<int>> = make2dArray(SIZE, SIZE);
+    for (var x:int = 0; x < SIZE; x++) {
+      for (var y:int = 0; y < SIZE; y++) {
+        if (altitude[x][y] < mapgen.OCEAN_ALTITUDE) {
+          result[x][y] += 255; // ocean
+        }
+        
+        result[x][y] += moisture[x][y];
+
+        var wx:Number = 0.1 * (8.0 + Math.random() + Math.random());
+        var wy:Number = 0.1 * (8.0 + Math.random() + Math.random());
+        var x2:int = x + int(windX * wx);
+        var y2:int = y + int(windY * wy);
+        x2 %= SIZE; y2 %= SIZE;
+        if (0 <= x2 && x2 < SIZE
+            && 0 <= y2 && y2 < SIZE
+            && x != x2 && y != y2) {
+          var transfer:int = moisture[x][y]/3;
+          var speed:Number = (30.0 + altitude[x][y]) / (30.0 + altitude[x2][y2]);
+          if (speed > 1.0) speed = 1.0;
+          /* speed is lower if going uphill */
+          transfer = int(transfer * speed);
+          
+          result[x][y] -= transfer;
+          result[x2][y2] += transfer;
+        }
+      }
+    }
+
+    for (x = 0; x < SIZE; x++) {
+      for (y = 0; y < SIZE; y++) {
+        if (result[x][y] < 0) result[x][y] = 0;
+        if (result[x][y] > 255) result[x][y] = 255;
+      }
+    }
+    
+    moisture = result;
+  }
+
+  public function carveCanyons():void {
+    for (var iteration:int = 0; iteration < 10000; iteration++) {
+      var x:int = int(Math.floor(SIZE*Math.random()));
+      var y:int = int(Math.floor(SIZE*Math.random()));
+
+      for (var trail:int = 0; trail < 1000; trail++) {
+        // Just quit at the boundaries
+        if (x == 0 || x == SIZE-1 || y == 0 || y == SIZE-1) {
+          break;
+        }
+
+        // Find the minimum neighbor
+        var x2:int = x, y2:int = y;
+        for (var dx:int = -1; dx <= +1; dx++) {
+          for (var dy:int = -1; dy <= +1; dy++) {
+            if (altitude[x+dx][y+dy] < altitude[x2][y2]) {
+              x2 = x+dx; y2 = y+dy;
+            }
+          }
+        }
+
+        // TODO: make the river keep going to the ocean no matter what!
+        
+        // Move the particle in that direction, and remove some land
+        if (x == x2 && y == y2) {
+          if (altitude[x][y] < 10) break;
+          // altitude[x][y] = Math.min(255, altitude[x][y] + trail);
+        }
+        x = x2; y = y2;
+        altitude[x][y] = Math.max(0, altitude[x][y] - 1);
+        rivers[x][y] += 1;
+      }
+    }
+
+    for (x = 0; x < SIZE; x++) {
+      for (y = 0; y < SIZE; y++) {
+        if (rivers[x][y] > 100) moisture[x][y] = 255;
+      }
+    }
+  }
+}
+

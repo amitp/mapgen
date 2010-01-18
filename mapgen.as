@@ -93,7 +93,7 @@ package {
       addChild(seed_text);
       addChild(createLabel("Seed:", 50, 40));
                
-      changeIntoEditable(moisture_iterations, "6");
+      changeIntoEditable(moisture_iterations, "4");
       moisture_iterations.restrict = "0-9";
       moisture_iterations.x = 150;
       moisture_iterations.y = 40;
@@ -427,27 +427,37 @@ class Map {
     }
   }
   
-  public function equalizeTerrain(b:BitmapData):void {
-    // Adjust altitude histogram so that it's roughly quadratic
-    var histograms:Vector.<Vector.<Number>> = b.histogram(b.rect);
-    var A:Vector.<Number> = histograms[1];
-    var k:int = 0;
+  public function equalizeTerrain(bitmap:BitmapData):void {
+    // Adjust altitude histogram so that it's roughly quadratic and
+    // water histogram so that it's roughly linear
+    var histograms:Vector.<Vector.<Number>> = bitmap.histogram(bitmap.rect);
+    var G:Vector.<Number> = histograms[1];
+    var B:Vector.<Number> = histograms[2];
+    var g:int = 0;
+    var b:int = 0;
     var green:Array = new Array(256);
-    var cumsum:Number = 0.0;
+    var blue:Array = new Array(256);
+    var cumsumG:Number = 0.0;
+    var cumsumB:Number = 0.0;
     for (var i:int = 0; i < 256; i++) {
-      cumsum += A[i];
-      green[i] = (k*k/256) << 8; // int to green color value
-      while (cumsum > SIZE*SIZE*Math.sqrt(k/256.0) && k < 255) {
-        k++;
+      cumsumG += G[i];
+      cumsumB += B[i];
+      green[i] = (g*g/255) << 8; // int to green color value
+      blue[i] = (b*b/255); // int to blue color value
+      while (cumsumG > SIZE*SIZE*Math.sqrt(g/256.0) && g < 255) {
+        g++;
+      }
+      while (cumsumB > SIZE*SIZE*(b/256.0) && b < 255) {
+        b++;
       }
     }
-    b.paletteMap(b, b.rect, new Point(0, 0), null, green, null, null);
+    bitmap.paletteMap(bitmap, bitmap.rect, new Point(0, 0), null, green, blue, null);
     
     // Blur everything because the quadratic shift introduces
     // discreteness -- ick!!  TODO: probably better to apply the
     // histogram correction after we convert to the altitude[]
     // array, although even there it's already been discretized :(
-    b.applyFilter(b, b.rect, new Point(0, 0), new BlurFilter());
+    bitmap.applyFilter(bitmap, bitmap.rect, new Point(0, 0), new BlurFilter());
   }
   
   public function make2dArray(w:int, h:int):Vector.<Vector.<int>> {

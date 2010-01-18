@@ -51,7 +51,7 @@ package {
       
       addChild(new Debug(this));
       
-      graphics.beginFill(0x9999aa);
+      graphics.beginFill(0xccccdd);
       graphics.drawRect(-1000, -1000, 2000, 2000);
       graphics.endFill();
 
@@ -81,23 +81,26 @@ package {
         button.filters = [new BevelFilter(1)];
       }
 
-      changeIntoEditable(seed_text, "" + SEED);
+      addChild(createLabel("Amit's map generator", 120, 2));
+      addChild(createLabel("http://simblob.blogspot.com/", 260+512, 515));
+      
+      changeIntoEditable(seed_text, "" + map.SEED);
       seed_text.restrict = "0-9";
-      seed_text.x = 180;
+      seed_text.x = 60;
       seed_text.y = 50;
       addChild(seed_text);
-      addChild(createLabel("Seed:", 180, 50));
+      addChild(createLabel("Seed:", 60, 50));
                
       changeIntoEditable(moisture_iterations, "6");
       moisture_iterations.restrict = "0-9";
-      moisture_iterations.x = 180;
+      moisture_iterations.x = 60;
       moisture_iterations.y = 80;
       addChild(moisture_iterations);
-      addChild(createLabel("Wind iter:", 180, 80));
+      addChild(createLabel("Wind iter:", 60, 80));
 
-      changeIntoButton(generate_button, " Update ");
+      changeIntoButton(generate_button, " Update Map ");
       generate_button.x = 160;
-      generate_button.y = 120;
+      generate_button.y = 80;
       generate_button.addEventListener(MouseEvent.MOUSE_UP,
                                        function (e:Event):void {
                                          map.SEED = int(seed_text.text);
@@ -105,9 +108,9 @@ package {
                                        });
       addChild(generate_button);
 
-      changeIntoButton(seed_button, " Random seed ");
+      changeIntoButton(seed_button, " Random Seed ");
       seed_button.x = 160;
-      seed_button.y = 160;
+      seed_button.y = 50;
       seed_button.addEventListener(MouseEvent.MOUSE_UP,
                                    function (e:Event):void {
                                      map.SEED = int(100000*Math.random());
@@ -116,18 +119,9 @@ package {
                                    });
       addChild(seed_button);
 
-      changeIntoButton(save_altitude_button, " Export Altitude ");
-      save_altitude_button.x = 160;
-      save_altitude_button.y = 220;
-      save_altitude_button.addEventListener(MouseEvent.MOUSE_UP,
-                                   function (e:Event):void {
-                                     saveAltitudeMap();
-                                   });
-      addChild(save_altitude_button);
-
       changeIntoButton(save_moisture_button, " Export Moisture ");
-      save_moisture_button.x = 160;
-      save_moisture_button.y = 240;
+      save_moisture_button.x = 10;
+      save_moisture_button.y = 130;
       save_moisture_button.addEventListener(MouseEvent.MOUSE_UP,
                                    function (e:Event):void {
                                      saveMoistureMap();
@@ -136,13 +130,22 @@ package {
 
       b = new Bitmap(moistureBitmap);
       b.x = 0;
-      b.y = 20;
+      b.y = 150;
       b.scaleX = 128.0/SIZE;
       b.scaleY = b.scaleX;
       addChild(b);
 
+      changeIntoButton(save_altitude_button, " Export Altitude ");
+      save_altitude_button.x = 140;
+      save_altitude_button.y = 130;
+      save_altitude_button.addEventListener(MouseEvent.MOUSE_UP,
+                                   function (e:Event):void {
+                                     saveAltitudeMap();
+                                   });
+      addChild(save_altitude_button);
+
       b = new Bitmap(altitudeBitmap);
-      b.x = 0;
+      b.x = 130;
       b.y = 150;
       b.scaleX = 128.0/SIZE;
       b.scaleY = b.scaleX;
@@ -169,8 +172,8 @@ package {
       addChild(s);
 
       location_text.text = "(detail map) ==>";
-      location_text.x = 150;
-      location_text.y = 200;
+      location_text.x = 260;
+      location_text.y = 513;
       location_text.autoSize = TextFieldAutoSize.LEFT;
       addChild(location_text);
 

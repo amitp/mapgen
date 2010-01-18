@@ -512,9 +512,7 @@ class Map {
         var x2:int = x + int(windX * wx);
         var y2:int = y + int(windY * wy);
         x2 %= SIZE; y2 %= SIZE;
-        if (0 <= x2 && x2 < SIZE
-            && 0 <= y2 && y2 < SIZE
-            && x != x2 && y != y2) {
+        if (x != x2 && y != y2) {
           var transfer:int = moisture[x][y]/3;
           var speed:Number = (30.0 + altitude[x][y]) / (30.0 + altitude[x2][y2]);
           if (speed > 1.0) speed = 1.0;

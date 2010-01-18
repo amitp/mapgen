@@ -88,21 +88,21 @@ package {
       
       changeIntoEditable(seed_text, "" + map.SEED);
       seed_text.restrict = "0-9";
-      seed_text.x = 60;
-      seed_text.y = 50;
+      seed_text.x = 50;
+      seed_text.y = 40;
       addChild(seed_text);
-      addChild(createLabel("Seed:", 60, 50));
+      addChild(createLabel("Seed:", 50, 40));
                
       changeIntoEditable(moisture_iterations, "6");
       moisture_iterations.restrict = "0-9";
-      moisture_iterations.x = 60;
-      moisture_iterations.y = 80;
+      moisture_iterations.x = 150;
+      moisture_iterations.y = 40;
       addChild(moisture_iterations);
-      addChild(createLabel("Wind iter:", 60, 80));
+      addChild(createLabel("Wind iter:", 150, 40));
 
       changeIntoButton(generate_button, " Update Map ");
-      generate_button.x = 160;
-      generate_button.y = 80;
+      generate_button.x = 180;
+      generate_button.y = 40;
       generate_button.addEventListener(MouseEvent.MOUSE_UP,
                                        function (e:Event):void {
                                          map.SEED = int(seed_text.text);
@@ -110,45 +110,48 @@ package {
                                        });
       addChild(generate_button);
 
-      changeIntoButton(seed_button, " Random Seed ");
-      seed_button.x = 160;
-      seed_button.y = 50;
+      changeIntoButton(seed_button, " Randomize ");
+      seed_button.x = 20;
+      seed_button.y = 70;
       seed_button.addEventListener(MouseEvent.MOUSE_UP,
                                    function (e:Event):void {
                                      map.SEED = int(100000*Math.random());
                                      seed_text.text = "" + map.SEED;
+                                     moisture_iterations.text = "" + (1 + int(9*Math.random()));
                                      newMap();
                                    });
       addChild(seed_button);
 
-      changeIntoButton(save_moisture_button, " Export Moisture ");
-      save_moisture_button.x = 10;
-      save_moisture_button.y = 120;
+      changeIntoButton(save_moisture_button, " Export ");
+      save_moisture_button.x = 60;
+      save_moisture_button.y = 380;
       save_moisture_button.addEventListener(MouseEvent.MOUSE_UP,
                                    function (e:Event):void {
                                      saveMoistureMap();
                                    });
       addChild(save_moisture_button);
+      addChild(createLabel("Moisture:", 60, 380));
 
       b = new Bitmap(moistureBitmap);
       b.x = 0;
-      b.y = 140;
+      b.y = 400;
       b.scaleX = 128.0/SIZE;
       b.scaleY = b.scaleX;
       addChild(b);
 
-      changeIntoButton(save_altitude_button, " Export Altitude ");
-      save_altitude_button.x = 140;
-      save_altitude_button.y = 120;
+      changeIntoButton(save_altitude_button, " Export ");
+      save_altitude_button.x = 190;
+      save_altitude_button.y = 380;
       save_altitude_button.addEventListener(MouseEvent.MOUSE_UP,
                                    function (e:Event):void {
                                      saveAltitudeMap();
                                    });
       addChild(save_altitude_button);
+      addChild(createLabel("Altitude:", 190, 380));
 
       b = new Bitmap(altitudeBitmap);
       b.x = 130;
-      b.y = 140;
+      b.y = 400;
       b.scaleX = 128.0/SIZE;
       b.scaleY = b.scaleX;
       addChild(b);
@@ -157,7 +160,7 @@ package {
       // so I'm wrapping the bitmap inside a sprite.
       var s:Sprite = new Sprite();
       s.x = 2;
-      s.y = 270;
+      s.y = 120;
       s.scaleX = s.scaleY = 256.0/SIZE;
       s.addEventListener(MouseEvent.MOUSE_DOWN,
                          function (e:MouseEvent):void {
@@ -173,8 +176,8 @@ package {
       s.addChild(new Bitmap(lightingMap)).blendMode = BlendMode.HARDLIGHT;
       addChild(s);
 
-      location_text.x = 260;
-      location_text.y = 513;
+      location_text.x = 20;
+      location_text.y = 100;
       location_text.autoSize = TextFieldAutoSize.LEFT;
       addChild(location_text);
 
@@ -312,6 +315,8 @@ package {
       // the base moisture and altitude levels with the noise function
       // (deterministic, since we use a non-random seed).
 
+      detailMap.fillRect(detailMap.rect, 0xff777777);
+      
       // Coordinates of the top left of the detail area:
       var baseX:int = int(centerX * BIGSIZE/SIZE - DETAILSIZE/2);
       var baseY:int = int(centerY * BIGSIZE/SIZE - DETAILSIZE/2);
@@ -328,6 +333,8 @@ package {
                 + A[coarseX][coarseY+1] * (1-fracX) * fracY
                 + A[coarseX+1][coarseY+1] * fracX * fracY);
       }
+
+      // TODO: this doesn't handle the edges of the map properly
       
       // Go through the detail area and compute each pixel color
       for (var x:int = baseX; x < baseX + DETAILSIZE; x++) {

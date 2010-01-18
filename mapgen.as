@@ -81,8 +81,10 @@ package {
         button.filters = [new BevelFilter(1)];
       }
 
-      addChild(createLabel("Amit's map generator", 120, 2));
-      addChild(createLabel("http://simblob.blogspot.com/", 260+512, 515));
+      addChild(createLabel("Generating maps of size "
+                           + SIZE + "x" + SIZE, 255, 2));
+      addChild(createLabel("Amit J Patel -- "
+                          + "http://simblob.blogspot.com/", 260+512, 515));
       
       changeIntoEditable(seed_text, "" + map.SEED);
       seed_text.restrict = "0-9";
@@ -121,7 +123,7 @@ package {
 
       changeIntoButton(save_moisture_button, " Export Moisture ");
       save_moisture_button.x = 10;
-      save_moisture_button.y = 130;
+      save_moisture_button.y = 120;
       save_moisture_button.addEventListener(MouseEvent.MOUSE_UP,
                                    function (e:Event):void {
                                      saveMoistureMap();
@@ -130,14 +132,14 @@ package {
 
       b = new Bitmap(moistureBitmap);
       b.x = 0;
-      b.y = 150;
+      b.y = 140;
       b.scaleX = 128.0/SIZE;
       b.scaleY = b.scaleX;
       addChild(b);
 
       changeIntoButton(save_altitude_button, " Export Altitude ");
       save_altitude_button.x = 140;
-      save_altitude_button.y = 130;
+      save_altitude_button.y = 120;
       save_altitude_button.addEventListener(MouseEvent.MOUSE_UP,
                                    function (e:Event):void {
                                      saveAltitudeMap();
@@ -146,7 +148,7 @@ package {
 
       b = new Bitmap(altitudeBitmap);
       b.x = 130;
-      b.y = 150;
+      b.y = 140;
       b.scaleX = 128.0/SIZE;
       b.scaleY = b.scaleX;
       addChild(b);
@@ -154,7 +156,7 @@ package {
       // NOTE: Bitmap and Shape objects do not support mouse events,
       // so I'm wrapping the bitmap inside a sprite.
       var s:Sprite = new Sprite();
-      s.x = 0;
+      s.x = 2;
       s.y = 270;
       s.scaleX = s.scaleY = 256.0/SIZE;
       s.addEventListener(MouseEvent.MOUSE_DOWN,
@@ -171,7 +173,6 @@ package {
       s.addChild(new Bitmap(lightingMap)).blendMode = BlendMode.HARDLIGHT;
       addChild(s);
 
-      location_text.text = "(detail map) ==>";
       location_text.x = 260;
       location_text.y = 513;
       location_text.autoSize = TextFieldAutoSize.LEFT;
@@ -227,7 +228,7 @@ package {
       channelsToLighting();
       arrayToBitmap(map.moisture, moistureBitmap);
       arrayToBitmap(map.altitude, altitudeBitmap);
-      location_text.text = "";
+      location_text.text = "(click on minimap to see detail)";
     }
     
     public function arrayToBitmap(v:Vector.<Vector.<int>>, b:BitmapData):void {

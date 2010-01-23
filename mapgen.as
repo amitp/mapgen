@@ -48,6 +48,7 @@ package {
       
       stage.scaleMode = "noScale";
       stage.align = "TL";
+      stage.frameRate = 60;
       
       addChild(new Debug(this));
       
@@ -216,15 +217,53 @@ package {
       generateDetailMap(event.localX, event.localY);
     }
 
+    // We want to incrementally generate the map using onEnterFrame,
+    // so the remaining commands needed to generate the map are stored here.
+    // _commands is a an array of ["explanatory text", function].
+    private var _commands:Array = [];
     public function newMap():void {
-      location_text.text = "(generating)";
-      map.generate();
-     
-      //map.carveCanyons();
+      // Invariant: if _commands is empty, there is no event listener
+      if (_commands.length == 0) {
+        addEventListener(Event.ENTER_FRAME, onEnterFrame);
+      }
 
+      _commands = [];
+      _commands.push(["Generating coarse map",
+                      function():void {
+                         map = new Map(128, SEED);
+                         map.generate();
+                         channelsToLighting();
+                       }]);
+      _commands.push(["Generating detail map",
+                      function():void {
+                         map = new Map(SIZE, SEED);
+                         map.generate();
+                         channelsToLighting();
+                         arrayToBitmap(map.altitude, altitudeBitmap);
+                       }]);
       for (var i:int = 0; i < int(moisture_iterations.text); i++) {
-        map.spreadMoisture();
-        //map.blurMoisture();
+        _commands.push(["Wind iteration " + (1+i),
+                        function():void {
+                           map.spreadMoisture();
+                           // map.blurMoisture();
+                         }]);
+      }
+    }
+
+    public function onEnterFrame(event:Event):void {
+      if (_commands.length > 0) {
+        var command:Array = _commands.shift();
+        location_text.text = command[0];
+        command[1]();
+
+        channelsToColors();
+        arrayToBitmap(map.moisture, moistureBitmap);
+      }
+
+      // Invariant: if _commands is empty, there is no event listener
+      if (_commands.length == 0) {
+        location_text.text = "(click on minimap to see detail)";
+        removeEventListener(Event.ENTER_FRAME, onEnterFrame);
       }
      
       channelsToColors();

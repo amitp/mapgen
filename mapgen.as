@@ -52,7 +52,7 @@ package {
       
       addChild(new Debug(this));
       
-      graphics.beginFill(0xccccdd);
+      graphics.beginFill(0xffffff);
       graphics.drawRect(-1000, -1000, 2000, 2000);
       graphics.endFill();
 
@@ -70,6 +70,7 @@ package {
       function changeIntoEditable(field:TextField, text:String):void {
         field.text = text;
         field.background = true;
+        field.backgroundColor = 0xccccdd;
         field.autoSize = TextFieldAutoSize.LEFT;
         field.type = TextFieldType.INPUT;
       }
@@ -77,6 +78,7 @@ package {
       function changeIntoButton(button:TextField, text:String):void {
         button.text = text;
         button.background = true;
+        button.backgroundColor = 0xbbddbb;
         button.selectable = false;
         button.autoSize = TextFieldAutoSize.LEFT;
         button.filters = [new BevelFilter(1)];

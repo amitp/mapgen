@@ -265,12 +265,6 @@ package {
         location_text.text = "(click on minimap to see detail)";
         removeEventListener(Event.ENTER_FRAME, onEnterFrame);
       }
-     
-      channelsToColors();
-      channelsToLighting();
-      arrayToBitmap(map.moisture, moistureBitmap);
-      arrayToBitmap(map.altitude, altitudeBitmap);
-      location_text.text = "(click on minimap to see detail)";
     }
     
     public function arrayToBitmap(v:Vector.<Vector.<int>>, b:BitmapData):void {

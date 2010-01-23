@@ -39,10 +39,10 @@ package {
     public var lightingMap:BitmapData;
     public var moistureBitmap:BitmapData;
     public var altitudeBitmap:BitmapData;
-    
+
     public function mapgen() {
-      colorMap = new BitmapData(SIZE, SIZE);
-      lightingMap = new BitmapData(SIZE, SIZE);
+      colorMap = new BitmapData(256, 256);
+      lightingMap = new BitmapData(256, 256);
       moistureBitmap = new BitmapData(SIZE, SIZE);
       altitudeBitmap = new BitmapData(SIZE, SIZE);
       
@@ -87,7 +87,7 @@ package {
       addChild(createLabel("Amit J Patel -- "
                           + "http://simblob.blogspot.com/", 260+512, 515));
       
-      changeIntoEditable(seed_text, "" + map.SEED);
+      changeIntoEditable(seed_text, "" + SEED);
       seed_text.restrict = "0-9";
       seed_text.x = 50;
       seed_text.y = 40;
@@ -106,7 +106,7 @@ package {
       generate_button.y = 40;
       generate_button.addEventListener(MouseEvent.MOUSE_UP,
                                        function (e:Event):void {
-                                         map.SEED = int(seed_text.text);
+                                         SEED = int(seed_text.text);
                                          newMap();
                                        });
       addChild(generate_button);
@@ -116,8 +116,8 @@ package {
       seed_button.y = 70;
       seed_button.addEventListener(MouseEvent.MOUSE_UP,
                                    function (e:Event):void {
-                                     map.SEED = int(100000*Math.random());
-                                     seed_text.text = "" + map.SEED;
+                                     SEED = int(100000*Math.random());
+                                     seed_text.text = "" + SEED;
                                      moisture_iterations.text = "" + (1 + int(9*Math.random()));
                                      newMap();
                                    });
@@ -162,7 +162,7 @@ package {
       var s:Sprite = new Sprite();
       s.x = 2;
       s.y = 120;
-      s.scaleX = s.scaleY = 256.0/SIZE;
+
       s.addEventListener(MouseEvent.MOUSE_DOWN,
                          function (e:MouseEvent):void {
                            s.addEventListener(MouseEvent.MOUSE_MOVE, onMapClick);
@@ -269,8 +269,8 @@ package {
     
     public function arrayToBitmap(v:Vector.<Vector.<int>>, b:BitmapData):void {
       b.lock();
-      for (var x:int = 0; x < SIZE; x++) {
-        for (var y:int = 0; y < SIZE; y++) {
+      for (var x:int = 0; x < v.length; x++) {
+        for (var y:int = 0; y < v[x].length; y++) {
           var c:int = v[x][y];
           b.setPixel(x, y, (c << 16) | (c << 8) | c);
         }
@@ -306,44 +306,54 @@ package {
     }
     
     public function channelsToColors():void {
-      colorMap.lock();
-      for (var x:int = 0; x < SIZE; x++) {
-        for (var y:int = 0; y < SIZE; y++) {
-          colorMap.setPixel
+      var b:BitmapData = new BitmapData(map.SIZE, map.SIZE);
+      for (var x:int = 0; x < map.SIZE; x++) {
+        for (var y:int = 0; y < map.SIZE; y++) {
+          b.setPixel
             (x, y,
              moistureAndAltitudeToColor(map.moisture[x][y],
                                         map.altitude[x][y] * (1.0 + 0.1*((x+y)%2)),
                                         map.rivers[x][y]));
         }
       }
-      colorMap.unlock();
+
+      var m:Matrix = new Matrix();
+      m.scale(colorMap.width / b.width, colorMap.height / b.height);
+      colorMap.draw(b, m, null, null, null, true);
     }
 
     public function channelsToLighting():void {
       // From the altitude map, generate a light map that highlights
       // northwest sides of hills. Then blur it all to remove sharp edges.
-      lightingMap.lock();
-      arrayToBitmap(map.altitude, lightingMap);
+      var b:BitmapData = new BitmapData(map.SIZE, map.SIZE);
+      arrayToBitmap(map.altitude, b);
       // NOTE: the scale for the lighting should be changed depending
       // on the map size but it's not clear in what way. Alternatively
       // we could rescale the lightingMap to a fixed size and always
       // use that for lighting.
-      lightingMap.applyFilter(lightingMap, lightingMap.rect, new Point(0, 0),
-                              new ConvolutionFilter
-                              (3, 3, [-2, -1, 0,
-                                      -1, 0, +1,
-                                      0, +1, +2], 2.0, 127));
-      lightingMap.applyFilter(lightingMap, lightingMap.rect, new Point(0, 0),
-                              new BlurFilter());
-      lightingMap.unlock();
+      b.applyFilter(b, b.rect, new Point(0, 0),
+                    new ConvolutionFilter
+                    (3, 3, [-2, -1, 0,
+                            -1, 0, +1,
+                            0, +1, +2], 2.0, 127));
+      b.applyFilter(b, b.rect, new Point(0, 0),
+                    new BlurFilter());
+      
+      var m:Matrix = new Matrix();
+      m.scale(lightingMap.width / b.width, lightingMap.height / b.height);
+      lightingMap.draw(b, m);
     }
 
     public function generateDetailMap(centerX:Number, centerY:Number):void {
       var NOISESIZE:int = 70;
       var noise:BitmapData = new BitmapData(NOISESIZE, NOISESIZE);
       var noiseScale:int = 1; // out of 128
-      noise.noise(map.SEED, 128-noiseScale, 128+noiseScale);
+      noise.noise(SEED, 128-noiseScale, 128+noiseScale);
 
+      // HACK: figure out the right way to do this
+      centerX *= 2.0;
+      centerY *= 2.0;
+      
       // We want to fill an area DETAILSIZE x DETAILSIZE by combining
       // the base moisture and altitude levels with the noise function
       // (deterministic, since we use a non-random seed).
@@ -351,8 +361,8 @@ package {
       detailMap.fillRect(detailMap.rect, 0xff777777);
       
       // Coordinates of the top left of the detail area:
-      var baseX:int = int(centerX * BIGSIZE/SIZE - DETAILSIZE/2);
-      var baseY:int = int(centerY * BIGSIZE/SIZE - DETAILSIZE/2);
+      var baseX:int = int(centerX * BIGSIZE/map.SIZE - DETAILSIZE/2);
+      var baseY:int = int(centerY * BIGSIZE/map.SIZE - DETAILSIZE/2);
 
       // 4-point interpolation function
       function interpolate(A:Vector.<Vector.<int>>, x:Number, y:Number):Number {
@@ -378,9 +388,9 @@ package {
           var noiseColor:int = noise.getPixel(x % NOISESIZE, y % NOISESIZE);
 
           var m:Number = interpolate(map.moisture,
-                                     x * SIZE/BIGSIZE, y * SIZE/BIGSIZE) + ((noiseColor & 0xff) - 128);
+                                     x * map.SIZE/BIGSIZE, y * map.SIZE/BIGSIZE) + ((noiseColor & 0xff) - 128);
           var a:Number = interpolate(map.altitude,
-                                     x * SIZE/BIGSIZE, y * SIZE/BIGSIZE);
+                                     x * map.SIZE/BIGSIZE, y * map.SIZE/BIGSIZE);
 
           // Make sure that the noise never turns ocean into non-ocean or vice versa
           if (a >= OCEAN_ALTITUDE) {

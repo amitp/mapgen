@@ -360,6 +360,12 @@ package {
       var baseX:int = int(centerX * BIGSIZE/map.SIZE - DETAILSIZE/2);
       var baseY:int = int(centerY * BIGSIZE/map.SIZE - DETAILSIZE/2);
 
+      // Make sure that we're entirely within the bounds of the map
+      baseX = Math.max(baseX, 0);
+      baseY = Math.max(baseY, 0);
+      baseX = Math.min(baseX, BIGSIZE - (BIGSIZE/map.SIZE) - DETAILSIZE);
+      baseY = Math.min(baseY, BIGSIZE - (BIGSIZE/map.SIZE) - DETAILSIZE);
+      
       // 4-point interpolation function
       function interpolate(A:Vector.<Vector.<int>>, x:Number, y:Number):Number {
         var coarseX:int = int(Math.floor(x));
@@ -373,8 +379,6 @@ package {
                 + A[coarseX+1][coarseY+1] * fracX * fracY);
       }
 
-      // TODO: this doesn't handle the edges of the map properly
-      
       // Go through the detail area and compute each pixel color
       for (var x:int = baseX; x < baseX + DETAILSIZE; x++) {
         for (var y:int = baseY; y < baseY + DETAILSIZE; y++) {

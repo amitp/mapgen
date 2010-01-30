@@ -14,7 +14,6 @@ package {
   public class mapgen extends Sprite {
     public static var SEED:int = 72689;
     // 83980, 59695, 94400, 92697, 30628, 9146, 23896, 60489, 57078, 89680, 10377, 42612, 29732
-    // NOTE: some sort of bug is triggered for seed 77904, leading to craters on the map
     public static var OCEAN_ALTITUDE:int = 1;
     public static var SIZE:int = 512;
     public static var BIGSIZE:int = 2048;

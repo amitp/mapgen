@@ -209,8 +209,11 @@ package {
     }
     
     public function onMapClick(event:MouseEvent):void {
-      location_text.text = "" + event.localX + ", " + event.localY;
-      generateDetailMap(event.localX, event.localY);
+      // Rescale the mouse click from the minimap size to the internal map size
+      var x:Number = event.localX * map.SIZE / colorMap.width;
+      var y:Number = event.localY * map.SIZE / colorMap.height;
+      location_text.text = "Map @ " + x + ", " + y;
+      generateDetailMap(x, y);
     }
 
     // We want to incrementally generate the map using onEnterFrame,
@@ -346,10 +349,6 @@ package {
       var noiseScale:int = 1; // out of 128
       noise.noise(SEED, 128-noiseScale, 128+noiseScale);
 
-      // HACK: figure out the right way to do this
-      centerX *= 2.0;
-      centerY *= 2.0;
-      
       // We want to fill an area DETAILSIZE x DETAILSIZE by combining
       // the base moisture and altitude levels with the noise function
       // (deterministic, since we use a non-random seed).

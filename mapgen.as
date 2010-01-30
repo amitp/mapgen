@@ -433,7 +433,12 @@ class Map {
     b.perlinNoise(SIZE, SIZE, 8, SEED, false, false);
     
     var s:Shape = new Shape();
-    
+
+    // NOTE: if we remembered the equalization and other parameters,
+    // we could zoom in at least on the altitude map by using the
+    // perlinNoise() size and offsets parameters to regenerate
+    // portions of the map at higher resolution. This could be useful
+    // when drawing the detail map.
     equalizeTerrain(b);
     
     var m:Matrix = new Matrix();
@@ -447,17 +452,6 @@ class Map {
     s.graphics.drawRect(0, 0, SIZE, SIZE);
     s.graphics.endFill();
     b.draw(s);
-    
-    /*
-      s.graphics.clear();
-      s.graphics.beginFill(0xffffff, 0.0);
-      s.graphics.drawRect(10, 10, SIZE-2*10, SIZE-2*10);
-      s.graphics.endFill();
-      b.draw(s);
-    */
-    
-    equalizeTerrain(b);
-    
     
     // Extract information from bitmap
     for (var x:int = 0; x < SIZE; x++) {

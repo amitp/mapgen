@@ -2,12 +2,6 @@
 // Author: amitp@cs.stanford.edu
 // License: MIT
 
-// TODO:
-// 1. break up generation into stages (low res, then high res, then wind)
-// 2. link stages to onEnterFrame so that the system isn't unresponsive
-// 3. make lighting size-independent
-// 4. make blurring optional
-
 package {
   import flash.geom.*;
   import flash.display.*;

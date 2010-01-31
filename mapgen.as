@@ -454,6 +454,8 @@ class Map {
     s.graphics.endFill();
     b.draw(s);
     
+    equalizeTerrain(b);
+    
     // Extract information from bitmap
     for (var x:int = 0; x < SIZE; x++) {
       for (var y:int = 0; y < SIZE; y++) {

@@ -20,6 +20,10 @@ package {
     public static var BIGSIZE:int = 2048;
     public static var DETAILSIZE:int = 128;
 
+    // Smooth color mode uses a continuous function for non-sand,
+    // non-water terrain; the regular mode uses discrete terrain types
+    public static var useSmoothColors:Boolean = false;
+    
     public var seed_text:TextField = new TextField();
     public var seed_button:TextField = new TextField();
     public var save_altitude_button:TextField = new TextField();
@@ -285,7 +289,11 @@ package {
       if (a < OCEAN_ALTITUDE) color = 0x000099;
       //else if (a < OCEAN_ALTITUDE + 3) color = 0xc2bd8c;
       else if (a < OCEAN_ALTITUDE + 5) color = 0xae8c4c;
-      else if (a > 220) {
+      else if (useSmoothColors) {
+        color = Color.hsvToRgb(40.0 + 100.0 * m/255 + 30 * Math.min(a,m)/255,
+                               0.8+0.2*m/255-0.7*a/255,
+                               0.5+0.5*a/255-0.3*m/255);
+      } else if (a > 220) {
         if (a > 250) color = 0xffffff;
         else if (a > 240) color = 0xeeeeee;
         else if (a > 230) color = 0xddddcc;

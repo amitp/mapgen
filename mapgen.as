@@ -17,11 +17,13 @@ package {
     // NOTE: some sort of bug is triggered for seed 77904, leading to craters on the map
     public static var OCEAN_ALTITUDE:int = 1;
     public static var SIZE:int = 512;
-    public static var BIGSIZE:int = 2048;
-    public static var DETAILSIZE:int = 128;
+    public static var DETAILSIZE:int = 64;
+    public static var DETAILMAG:int = 8;
     
     // Smooth color mode uses a continuous function for non-sand,
-    // non-water terrain; the regular mode uses discrete terrain types
+    // non-water terrain; the regular mode uses discrete terrain
+    // types. Smooth coloring doesn't work well with the smoothing
+    // from vertex displacement.
     public static var useSmoothColors:Boolean = false;
     
     public var seed_text:TextField = new TextField();
@@ -32,13 +34,21 @@ package {
     public var moisture_iterations:TextField = new TextField();
     public var generate_button:TextField = new TextField();
 
+    public var corner_adjust_text:TextField = new TextField();
+    public var random_adjust_text:TextField = new TextField();
+      
     public var map:Map = new Map(SIZE, SEED);
-    public var detailMap:BitmapData = new BitmapData(DETAILSIZE, DETAILSIZE);
     public var colorMap:BitmapData;
     public var lightingMap:BitmapData;
     public var moistureBitmap:BitmapData;
     public var altitudeBitmap:BitmapData;
 
+    public var detailMap:Shape = new Shape();
+    
+    [Embed("oryx/lofi_environment_a.png")]
+      public const lofi_environment_a:Class;
+    public var sprites:Bitmap = new lofi_environment_a();
+    
     public function mapgen() {
       colorMap = new BitmapData(256, 256);
       lightingMap = new BitmapData(256, 256);
@@ -134,7 +144,7 @@ package {
       addChild(save_moisture_button);
       addChild(createLabel("Moisture:", 60, 380));
 
-      b = new Bitmap(moistureBitmap);
+      var b:Bitmap = new Bitmap(moistureBitmap);
       b.x = 0;
       b.y = 400;
       b.scaleX = 128.0/SIZE;
@@ -183,12 +193,23 @@ package {
       location_text.autoSize = TextFieldAutoSize.LEFT;
       addChild(location_text);
 
-      var b:Bitmap = new Bitmap(detailMap);
-      b.x = 260;
-      b.y = 0;
-      b.scaleX = 512.0 / DETAILSIZE;
-      b.scaleY = 512.0 / DETAILSIZE;
-      addChild(b);
+      changeIntoEditable(corner_adjust_text, "0.25");
+      corner_adjust_text.restrict = "0-9.";
+      corner_adjust_text.x = 220;
+      corner_adjust_text.y = 60;
+      addChild(corner_adjust_text);
+      addChild(createLabel("Corner:", 200, 60));
+               
+      changeIntoEditable(random_adjust_text, "0.00");
+      random_adjust_text.restrict = "0-9.";
+      random_adjust_text.x = 220;
+      random_adjust_text.y = 80;
+      addChild(random_adjust_text);
+      addChild(createLabel("Random:", 200, 80));
+               
+      detailMap.x = 260;
+      detailMap.y = 0;
+      addChild(detailMap);
       
       newMap();
     }
@@ -218,7 +239,7 @@ package {
       var x:Number = event.localX * map.SIZE / colorMap.width;
       var y:Number = event.localY * map.SIZE / colorMap.height;
       location_text.text = "Map @ " + x + ", " + y;
-      generateDetailMap(x, y);
+      generateDetailMap(detailMap.graphics, x, y);
     }
 
     // We want to incrementally generate the map using onEnterFrame,
@@ -249,7 +270,7 @@ package {
         _commands.push(["Wind iteration " + (1+i),
                         function():void {
                            map.spreadMoisture();
-                           // map.blurMoisture();
+                           map.blurMoisture();
                          }]);
       }
     }
@@ -352,66 +373,97 @@ package {
       lightingMap.draw(b, m);
     }
 
-    public function generateDetailMap(centerX:Number, centerY:Number):void {
-      var NOISESIZE:int = 70;
-      var noise:BitmapData = new BitmapData(NOISESIZE, NOISESIZE);
-      var noiseScale:int = 1; // out of 128
-      noise.noise(SEED, 128-noiseScale, 128+noiseScale);
-
-      // We want to fill an area DETAILSIZE x DETAILSIZE by combining
-      // the base moisture and altitude levels with the noise function
-      // (deterministic, since we use a non-random seed).
-
-      detailMap.fillRect(detailMap.rect, 0xff777777);
+    public function generateDetailMap(g: Graphics, centerX:Number, centerY:Number):void {
+      // Parameters
+      var cornerAdjust:Number = DETAILMAG*Number(corner_adjust_text.text);
+      var randomAdjust:Number = DETAILMAG*Number(random_adjust_text.text);
       
-      // Coordinates of the top left of the detail area:
-      var baseX:int = int(centerX * BIGSIZE/map.SIZE - DETAILSIZE/2);
-      var baseY:int = int(centerY * BIGSIZE/map.SIZE - DETAILSIZE/2);
+      // We are drawing an area DETAILSIZE x DETAILSIZE.
+      var x:int, y:int;
+      g.clear();
+      
+      // Coordinates of the detail area:
+      var bounds:Rectangle = new Rectangle
+        (int(centerX  - DETAILSIZE/2), int(centerY - DETAILSIZE/2),
+         DETAILSIZE, DETAILSIZE);
 
       // Make sure that we're entirely within the bounds of the map
-      baseX = Math.max(baseX, 0);
-      baseY = Math.max(baseY, 0);
-      baseX = Math.min(baseX, BIGSIZE - (BIGSIZE/map.SIZE) - DETAILSIZE);
-      baseY = Math.min(baseY, BIGSIZE - (BIGSIZE/map.SIZE) - DETAILSIZE);
+      bounds = bounds.intersection(new Rectangle(0, 0, SIZE, SIZE));
       
-      // 4-point interpolation function
-      function interpolate(A:Vector.<Vector.<int>>, x:Number, y:Number):Number {
-        var coarseX:int = int(Math.floor(x));
-        var coarseY:int = int(Math.floor(y));
-        var fracX:Number = x - coarseX;
-        var fracY:Number = y - coarseY;
-
-        return (A[coarseX][coarseY] * (1-fracX) * (1-fracY)
-                + A[coarseX+1][coarseY] * fracX * (1-fracY)
-                + A[coarseX][coarseY+1] * (1-fracX) * fracY
-                + A[coarseX+1][coarseY+1] * fracX * fracY);
-      }
-
-      // Go through the detail area and compute each pixel color
-      for (var x:int = baseX; x < baseX + DETAILSIZE; x++) {
-        for (var y:int = baseY; y < baseY + DETAILSIZE; y++) {
-          // The moisture and altitude at x,y will be based on the
-          // coarse map, plus the noise scaled by some constant
-
-          var noiseColor:int = noise.getPixel(x % NOISESIZE, y % NOISESIZE);
-
-          var m:Number = interpolate(map.moisture,
-                                     x * map.SIZE/BIGSIZE, y * map.SIZE/BIGSIZE) + ((noiseColor & 0xff) - 128);
-          var a:Number = interpolate(map.altitude,
-                                     x * map.SIZE/BIGSIZE, y * map.SIZE/BIGSIZE);
-
-          // Make sure that the noise never turns ocean into non-ocean or vice versa
-          if (a >= OCEAN_ALTITUDE) {
-            a += (((noiseColor >> 8) & 0xff) - 128);
-            if (a < OCEAN_ALTITUDE) {
-              a = OCEAN_ALTITUDE;
-            }
-          }
-          
-          detailMap.setPixel(x - baseX, y - baseY,
-                             moistureAndAltitudeToColor(m, a, 0));
+      // 2d Array of vertices
+      var vertices:Array = [];
+      for (x = bounds.left; x <= bounds.right; x++) {
+        vertices[x] = [];
+        for (y = bounds.top; y <= bounds.bottom; y++) {
+          // TODO: we'd save a lot of allocation if we reused these points
+          vertices[x][y] = new Point((x-centerX+DETAILSIZE/2)*DETAILMAG,
+                                     (y-centerY+DETAILSIZE/2)*DETAILMAG);
         }
       }
+
+      // Move vertices randomly
+      var noise:BitmapData = new BitmapData(256, 256);
+      noise.noise(SEED, 0, 255);
+      for (x = bounds.left; x <= bounds.right; x++) {
+        for (y = bounds.top; y <= bounds.bottom; y++) {
+          var noiseColor:int = noise.getPixel(x % 256, y % 256);
+          var rand1:Number = ((noiseColor & 0x00ff00) >> 8) / 255.0 - 0.5;
+          var rand2:Number = (noiseColor & 0xff) / 255.0 - 0.5;
+          vertices[x][y].x += rand1 * randomAdjust;
+          vertices[x][y].y += rand2 * randomAdjust;
+        }
+      }
+      
+      // Alter vertices if 3 of 4 squares has same type
+      for (x = bounds.left+1; x < bounds.right; x++) {
+        for (y = bounds.top+1; y < bounds.bottom; y++) {
+          // Sprites at the four squares touching this vertex
+          var cTL:int = moistureAndAltitudeToColor(map.moisture[x-1][y-1], map.altitude[x-1][y-1], 0);
+          var cTR:int = moistureAndAltitudeToColor(map.moisture[x][y-1], map.altitude[x][y-1], 0);
+          var cBL:int = moistureAndAltitudeToColor(map.moisture[x-1][y], map.altitude[x-1][y], 0);
+          var cBR:int = moistureAndAltitudeToColor(map.moisture[x][y], map.altitude[x][y], 0);
+
+          // Figure out which corner is odd, if any 
+          if (cTR == cBL && cBL == cBR && cTL != cTR) {  // TL is odd
+            vertices[x][y].x -= cornerAdjust;
+            vertices[x][y].y -= cornerAdjust;
+          }
+          if (cTL == cTR && cTR == cBL && cBL != cBR) {  // BR is odd
+            vertices[x][y].x += cornerAdjust;
+            vertices[x][y].y += cornerAdjust;
+          }
+          if (cTL == cBL && cBL == cBR && cTL != cTR) {  // TR is odd
+            vertices[x][y].x += cornerAdjust;
+            vertices[x][y].y -= cornerAdjust;
+          }
+          if (cTL == cTR && cTR == cBR && cTL != cBL) {  // BL is odd
+            vertices[x][y].x -= cornerAdjust;
+            vertices[x][y].y += cornerAdjust;
+          }
+          // TODO: this seems like stupid repetitive code TODO: what
+          // should we do when we have tiles A A B C (A and A are
+          // adjacent but only two of them)?
+        }
+      }
+      
+      // Draw grid
+      // g.lineStyle(1, 0x000000, 0.1);   // TODO: set border if tiles not the same
+      var m:Matrix = new Matrix();
+      for (x = bounds.left; x < bounds.right; x++) {
+        for (y = bounds.top; y < bounds.bottom; y++) {
+          // TODO: we should have cached the tile ids when we generate the map...
+          var c:int = moistureAndAltitudeToColor(map.moisture[x][y],
+                                                 map.altitude[x][y], 0);
+          g.beginFill(c);
+          g.moveTo(vertices[x][y].x, vertices[x][y].y);
+          g.lineTo(vertices[x][y+1].x, vertices[x][y+1].y);
+          g.lineTo(vertices[x+1][y+1].x, vertices[x+1][y+1].y);
+          g.lineTo(vertices[x+1][y].x, vertices[x+1][y].y);
+          g.lineTo(vertices[x][y].x, vertices[x][y].y);
+          g.endFill();
+        }
+      }
+      g.lineStyle();
     }
   }
 }
@@ -561,8 +613,8 @@ class Map {
   }
   
   public function spreadMoisture():void {
-    var windX:Number = 250.0 * SIZE/mapgen.BIGSIZE;
-    var windY:Number = 120.0 * SIZE/mapgen.BIGSIZE;
+    var windX:Number = SIZE/17.0;
+    var windY:Number = SIZE/23.0;
     var evaporation:int = 1;
     
     var result:Vector.<Vector.<int>> = make2dArray(SIZE, SIZE);
@@ -574,8 +626,9 @@ class Map {
         
         result[x][y] += moisture[x][y] - evaporation;
 
-        var wx:Number = 0.1 * (8.0 + Math.random() + Math.random());
-        var wy:Number = 0.1 * (8.0 + Math.random() + Math.random());
+        // Dampen the randomness
+        var wx:Number = (20.0 + Math.random() + Math.random()) / 21.0;
+        var wy:Number = (20.0 + Math.random() + Math.random()) / 21.0;
         var x2:int = x + int(windX * wx);
         var y2:int = y + int(windY * wy);
         x2 %= SIZE; y2 %= SIZE;

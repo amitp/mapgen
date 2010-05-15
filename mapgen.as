@@ -19,7 +19,7 @@ package {
     public static var SIZE:int = 512;
     public static var BIGSIZE:int = 2048;
     public static var DETAILSIZE:int = 128;
-
+    
     // Smooth color mode uses a continuous function for non-sand,
     // non-water terrain; the regular mode uses discrete terrain types
     public static var useSmoothColors:Boolean = false;
@@ -421,6 +421,10 @@ import flash.geom.*;
 import flash.filters.*;
 
 class Map {
+  // Make the map into an island.  0.39 makes almost every map into an
+  // island; 0.1 makes almost no map into an island.
+  public static var ISLAND_EFFECT:Number = 0.39;
+  
   public var SIZE:int;
   public var SEED:int;
   
@@ -449,19 +453,31 @@ class Map {
     // portions of the map at higher resolution. This could be useful
     // when drawing the detail map.
     equalizeTerrain(b);
-    
-    var m:Matrix = new Matrix();
-    m.createGradientBox(SIZE, SIZE, 0, 0, 0);
-    s.graphics.beginGradientFill(GradientType.RADIAL,
-                                 [0x000000, 0x000000],
-                                 [0.0, 0.3],
-                                 [0x00, 0xff],
-                                 m,
-                                 SpreadMethod.PAD);
-    s.graphics.drawRect(0, 0, SIZE, SIZE);
-    s.graphics.endFill();
-    b.draw(s);
-    
+
+    // Overlay this on an "island" multiplier map
+    // Based on http://www.ridgenet.net/~jslayton/FunWithWilburVol6/index.html
+    for (x = 0; x < SIZE; x++) {
+      for (y= 0; y < SIZE; y++) {
+        var radiusSquared:Number = (x-SIZE/2)*(x-SIZE/2) + (y-SIZE/2)*(y-SIZE/2);
+        radiusSquared += Math.pow(Math.max(Math.abs(x-SIZE/2), Math.abs(y-SIZE/2)), 2);
+        var max_radiusSquared:Number = SIZE*SIZE/4;
+        radiusSquared /= max_radiusSquared;
+        radiusSquared += Math.random() * 0.1;
+        radiusSquared *= ISLAND_EFFECT; 
+        var island_multiplier:Number = Math.exp(-radiusSquared/4)-radiusSquared;
+        island_multiplier = island_multiplier * island_multiplier * island_multiplier;
+        // island_multiplier = island_multiplier * island_multiplier * island_multiplier;
+
+        c = b.getPixel(x, y);
+        var height:int = (c >> 8) & 0xff;
+        height = int(island_multiplier * height);
+        if (height < 0) height = 0;
+        if (height > 255) height = 255;
+        c = (c & 0xffff00ff) | (height << 8);
+        b.setPixel(x, y, c);
+      }
+    }
+
     equalizeTerrain(b);
     
     // Extract information from bitmap
